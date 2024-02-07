@@ -17,6 +17,7 @@ main() {
     
     # Install the required packages onto the raspberry pi
     install-dev-tools
+    install-opsec-tools
     # install-access-point
     # install-network-tools
     # install-cryptographics
