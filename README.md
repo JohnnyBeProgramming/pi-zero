@@ -29,9 +29,8 @@ we can securely copy the installation file like so:
 scp ./install.sh admin@club404.local:.
 
 # Connect to the device using SSH
-ssh admin@club404.local
-# <-- Now you should be connected to device terminal, then run:
-# admin@club404: ./install.sh
+ssh admin@club404.local ./install.sh
+# <-- Now you should be prompted for the ssh password, then it starts installing
 ```
 
 ### Converting Rasberri pi image to QEMU `qcow`
