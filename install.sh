@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # --------------------------------------------------------------
 # This script is used to initialise a (Debian) rasberry pi device,
-# and installs:
+# and installs the following:
 #  - Latest system updates and patches
 #  - Enables SSH for remote connections
-#  -
+#  - Developer tools such as python, node, golang and rust
+#  - Some tools used for network mapping and DNS lookup
+#  - Software to turn the device into an access point
 # --------------------------------------------------------------
 main() {
     # Setup basic config and enable SSH (if not already activated)
@@ -16,8 +18,8 @@ main() {
     update-os
     
     # Install the required packages onto the raspberry pi
-    install-dev-tools
-    install-opsec-tools
+    #install-dev-tools
+    #install-opsec-tools
     # install-access-point
     # install-network-tools
     # install-cryptographics
@@ -70,17 +72,34 @@ install-dev-tools() {
     sudo npm install --global yarn
     
     # Install golang
-    #install-golang-latest
-    sudo apt-get install golang
+    #sudo apt-get install golang
+    install-golang-latest
     
     # Install taskfile as a golang package
-    #go install github.com/go-task/task/v3/cmd/task@latest
+    go install github.com/go-task/task/v3/cmd/task@latest
     
     # Install hugo (static site generator)
     sudo apt install -y hugo
     
     # Install rust
     curl https://sh.rustup.rs -sSf | bash -s -- -y
+}
+
+upgrade-python-version() {
+    local tag="3.11.5"
+    wget https://www.python.org/ftp/python/$tag/Python-$tag.tgz
+    tar -zxvf Python-$tag.tgz
+    cd Python-$tag
+    ./configure --enable-optimizations
+    sudo make altinstall
+    cd ..
+    rm -rf Python-$tag
+    rm -f Python-$tag.tgz
+
+    #pushd /usr/bin > /dev/null
+    #sudo rm python
+    #sudo ln -s /usr/local/bin/python3.11 python
+    #popd /dev/null
 }
 
 install-golang-latest() {
@@ -91,8 +110,8 @@ install-golang-latest() {
     rm go$tag.linux-$arch.tar.gz
 
     cat << EOF >> ~/.profile
-PATH="\$PATH:/usr/local/go/bin"
 GOPATH="\$HOME/go"
+PATH="\$GOPATH/bin:/usr/local/go/bin:\$PATH"
 EOF
     source ~/.profile
 }
