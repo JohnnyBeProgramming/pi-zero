@@ -21,10 +21,15 @@ To simplify and streamline the installation, the `install.sh` was created
 to allow us to automate most of the setup of the pi zero.
 
 ```bash
-# From the host machine, install over ssh:
+# Option 1: From your host machine, install over ssh
 scp ./install.sh admin@club404.local:.
 ssh admin@club404.local ./install.sh
 # <-- Now you should be prompted for the ssh password, then it starts installing
+
+# Option 2: On the raspberry pi zero, install from git
+git clone git@github.com:JohnnyBeProgramming/pi-zero.git
+cd pi-zero
+sudo ./install.sh
 ```
 
 This script will install all the required tools we need on the device:
