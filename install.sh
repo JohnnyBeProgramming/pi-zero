@@ -19,7 +19,7 @@ main() {
     
     # Install the required packages onto the raspberry pi
     install-dev-tools
-    #install-opsec-tools
+    install-opsec-tools
     # install-access-point
     # install-network-tools
     # install-cryptographics
@@ -68,8 +68,7 @@ install-dev-tools() {
     sudo apt-get -y install python3-pip python3-dev
     
     # Install NodeJS
-    if ! which npm > /dev/null
-    then
+    if ! which npm > /dev/null; then
         sudo apt install -y nodejs npm
         sudo npm install --global yarn
     fi
@@ -79,8 +78,7 @@ install-dev-tools() {
     install-golang-latest
     
     # Install rust
-    if ! which cargo > /dev/null
-    then
+    if ! which cargo > /dev/null; then
         curl https://sh.rustup.rs -sSf | bash -s -- -y
     fi
 }
@@ -105,19 +103,18 @@ upgrade-python-version() {
         sudo ln -s /usr/local/bin/$bin python
         popd /dev/null
     fi
+}
 
 install-golang-latest() {
     local tag="1.21.4"
     local arch=$(uname -m)
-    if ! go version | grep $tag > /dev/null
-    then
+    if ! go version | grep $tag > /dev/null; then
         wget https://go.dev/dl/go$tag.linux-$arch.tar.gz
         sudo tar -C /usr/local -xzf go$tag.linux-$arch.tar.gz
         rm go$tag.linux-$arch.tar.gz
     fi
 
-    if ! cat ~/.profile | grep GOPATH > /dev/null:
-    then
+    if ! cat ~/.profile | grep GOPATH > /dev/null; then
         cat << EOF >> ~/.profile
 GOPATH="\$HOME/go"
 PATH="\$GOPATH/bin:/usr/local/go/bin:\$PATH"
