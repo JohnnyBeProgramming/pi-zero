@@ -20,12 +20,14 @@ ssh admin@respberrypi.local whoami
 To simplify and streamline the installation, the `install.sh` was created
 to allow us to automate most of the setup of the pi zero.
 
+## Option 1: From your host machine, install over ssh
 ```bash
-# Option 1: From your host machine, install over ssh
 cat ./install.sh | ssh admin@respberrypi.local
 # <-- Now you should be prompted for the ssh password, then it starts installing
+```
 
-# Option 2: On the raspberry pi zero, install from git
+## Option 2: On the raspberry pi zero, install from git
+```
 sudo apt install git
 git clone https://github.com/JohnnyBeProgramming/pi-zero.git
 sudo ./pi-zero/install.sh
