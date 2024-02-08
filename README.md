@@ -1,4 +1,4 @@
-# Club404 - Raspberry Pi
+# Setting up a Raspberry Pi Zero W
 
 This repository contains the required scripts and setup to deploy some tools to a Raspberri Pi.
 
@@ -27,7 +27,7 @@ cat ./install.sh | ssh admin@respberrypi.local
 ```
 
 ## Option 2: On the raspberry pi zero, install from git
-```
+```bash
 sudo apt install git
 git clone https://github.com/JohnnyBeProgramming/pi-zero.git
 sudo ./pi-zero/install.sh

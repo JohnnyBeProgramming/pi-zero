@@ -18,7 +18,7 @@ main() {
     update-os
     
     # Install the required packages onto the raspberry pi
-    #install-dev-tools
+    install-dev-tools
     #install-opsec-tools
     # install-access-point
     # install-network-tools
@@ -68,71 +68,62 @@ install-dev-tools() {
     sudo apt-get -y install python3-pip python3-dev
     
     # Install NodeJS
-    sudo apt install -y nodejs npm
-    sudo npm install --global yarn
+    if ! which npm > /dev/null
+    then
+        sudo apt install -y nodejs npm
+        sudo npm install --global yarn
+    fi
     
     # Install golang
     #sudo apt-get install golang
     install-golang-latest
     
-    # Install taskfile as a golang package
-    go install github.com/go-task/task/v3/cmd/task@latest
-    
-    # Install hugo (static site generator)
-    sudo apt install -y hugo
-    
     # Install rust
-    curl https://sh.rustup.rs -sSf | bash -s -- -y
+    if ! which cargo > /dev/null
+    then
+        curl https://sh.rustup.rs -sSf | bash -s -- -y
+    fi
 }
 
 upgrade-python-version() {
     local tag="3.11.5"
-    wget https://www.python.org/ftp/python/$tag/Python-$tag.tgz
-    tar -zxvf Python-$tag.tgz
-    cd Python-$tag
-    ./configure --enable-optimizations
-    sudo make altinstall
-    cd ..
-    rm -rf Python-$tag
-    rm -f Python-$tag.tgz
+    local bin="python3.11"
 
-    #pushd /usr/bin > /dev/null
-    #sudo rm python
-    #sudo ln -s /usr/local/bin/python3.11 python
-    #popd /dev/null
-}
+    if [ ! -f /usr/local/bin/$bin ]
+    then
+        wget https://www.python.org/ftp/python/$tag/Python-$tag.tgz
+        tar -zxvf Python-$tag.tgz
+        cd Python-$tag
+        ./configure --enable-optimizations
+        sudo make altinstall
+        cd ..
+        rm -rf Python-$tag
+        rm -f Python-$tag.tgz
+
+        pushd /usr/bin > /dev/null
+        sudo rm python
+        sudo ln -s /usr/local/bin/$bin python
+        popd /dev/null
+    fi
 
 install-golang-latest() {
     local tag="1.21.4"
     local arch=$(uname -m)
-    wget https://go.dev/dl/go$tag.linux-$arch.tar.gz
-    sudo tar -C /usr/local -xzf go$tag.linux-$arch.tar.gz
-    rm go$tag.linux-$arch.tar.gz
+    if ! go version | grep $tag > /dev/null
+    then
+        wget https://go.dev/dl/go$tag.linux-$arch.tar.gz
+        sudo tar -C /usr/local -xzf go$tag.linux-$arch.tar.gz
+        rm go$tag.linux-$arch.tar.gz
+    fi
 
-    cat << EOF >> ~/.profile
+    if ! cat ~/.profile | grep GOPATH > /dev/null:
+    then
+        cat << EOF >> ~/.profile
 GOPATH="\$HOME/go"
 PATH="\$GOPATH/bin:/usr/local/go/bin:\$PATH"
 EOF
+    fi
     source ~/.profile
-}
-
-install-docker() {
-    # Add Docker's official GPG key:
-    sudo apt-get update
-    sudo apt-get install ca-certificates curl
-    sudo install -m 0755 -d /etc/apt/keyrings
-    sudo curl -fsSL https://download.docker.com/linux/raspbian/gpg -o /etc/apt/keyrings/docker.asc
-    sudo chmod a+r /etc/apt/keyrings/docker.asc
-
-    # Set up Docker's APT repository:
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/raspbian $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-    sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-    sudo apt-get update
-
-    # Install docker and all its tools
-    sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-
-    #sudo docker run hello-world
 }
 
 install-access-point() {
@@ -180,6 +171,12 @@ install-opsec-tools() {
     # dirbuster:    DirBuster is a multi threaded java application designed to brute force directories and files names on web/application servers.
     # gobuster:     Discover directories and files that match in the wordlist (written on golang)
     sudo apt install -y nmap gobuster #dirbuster
+
+    # Install hugo (static site generator)
+    sudo apt install -y hugo
+
+    # Install taskfile as a golang package
+    go install github.com/go-task/task/v3/cmd/task@latest    
 }
 
 install-wordlist() {
