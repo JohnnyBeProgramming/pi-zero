@@ -8,6 +8,10 @@
 #  - Some tools used for network mapping and DNS lookup
 #  - Software to turn the device into an access point
 # --------------------------------------------------------------
+APP_NAME="opsec"
+APP_HOME="$HOME/app"
+APP_REPO="https://github.com/JohnnyBeProgramming/pi-zero.git"
+
 main() {
     # Setup basic config and enable SSH (if not already activated)
     config $@
@@ -270,19 +274,17 @@ create-usb-image() {
 }
 
 create-startup-script() {
-    local app_path="~/app"
-    local app_repo="https://github.com/JohnnyBeProgramming/pi-zero.git"
-
-    if [ ! -d "$app_path" ]
+    if [ ! -d "$APP_HOME" ]
     then
-        git clone $app_repo $app_path
+        # Pull the application sources from git
+        git clone $APP_REPO $APP_HOME
     fi
 
-    # create systemd service unit for startup and persistence
+    # Create systemd service for startup and persistence
     # Note: switched to multi-user.target to make nexmon monitor mode work
-    if [ ! -f /etc/systemd/system/opsec.service ]; then
+    if [ ! -f /etc/systemd/system/$APP_NAME.service ]; then
         echo "Injecting 'opsec' startup script..."
-        cat <<- EOF | sudo tee /etc/systemd/system/opsec.service > /dev/null
+        cat <<- EOF | sudo tee /etc/systemd/system/$APP_NAME.service > /dev/null
                 [Unit]
                 Description=OpSec Startup Service
                 #After=systemd-modules-load.service
@@ -294,7 +296,7 @@ create-startup-script() {
                 #Type=oneshot
                 Type=forking
                 RemainAfterExit=yes
-                ExecStart=/bin/bash $app_path/boot/boot_app
+                ExecStart=/bin/bash $APP_HOME/app/boot_app
                 StandardOutput=journal+console
                 StandardError=journal+console
 
@@ -304,7 +306,7 @@ create-startup-script() {
 EOF
 fi
 
-    sudo systemctl enable opsec.service
+    sudo systemctl enable $APP_NAME.service
 }
 
 # Bootstrap the script

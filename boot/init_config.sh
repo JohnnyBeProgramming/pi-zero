@@ -11,7 +11,7 @@ then
 fi
 
 # include payload (overrides variables set by setup.env if needed)
-if [ ! -z "$PAYLOAD" ]
+if [ ! -z "$PAYLOAD" ] && [ -f $OPSEC_DIR/payloads/$PAYLOAD ]
 then
     # PAYLOAD itself is define in setup.env
     source $OPSEC_DIR/payloads/$PAYLOAD

@@ -19,6 +19,7 @@
 #    along with P4wnP1.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+from pathlib import Path
 import pwd
 import grp
 import time
@@ -40,7 +41,7 @@ def prepare():
 		# fix ownership
 		os.chown(filepath, pwd.getpwnam(uid).pw_uid, grp.getgrnam(gid).gr_gid)
 		os.chmod(filepath, 0o666)
-		
+
 	# setup manual led control
 	with open(ledpath + "trigger", "w") as trigger:
 		trigger.write("none")
