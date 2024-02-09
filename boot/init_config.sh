@@ -2,7 +2,7 @@
 # --------------------------------------------------------------------
 # Load global configuration variables defined in setup.env
 # --------------------------------------------------------------------
-THIS_DIR=$(cd $(dirname $BASH_SOURCE[0]) && pwd)
+THIS_DIR=$(cd $(dirname $0) && pwd)
 
 # include setup.env
 if [ -f $OPSEC_DIR/setup.env ]

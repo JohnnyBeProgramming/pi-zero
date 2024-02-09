@@ -2,7 +2,7 @@
 # --------------------------------------------------------------------
 # Provides WiFi functionality for Pi Zero W (equipped with WiFI module)
 # --------------------------------------------------------------------
-THIS_DIR=$(cd $(dirname $BASH_SOURCE[0]) && pwd)
+THIS_DIR=$(cd $(dirname $0) && pwd)
 
 # check for wifi capability
 function check_wifi()
