@@ -11,21 +11,25 @@
 main() {
     # Setup basic config and enable SSH (if not already activated)
     config $@
-    enable-ssh
+    #enable-ssh
     
     # First we check for an internet connection, and update the OS
-    check-internet
-    update-os
+    #check-internet
+    #update-os
     
     # Install the required packages onto the raspberry pi
     install-dev-tools
-    install-opsec-tools
-    # install-access-point
-    # install-network-tools
-    # install-cryptographics
+    #install-opsec-tools
+
+    install-access-point
+    install-cryptography-tools
+    install-network-tools
     
     # Setup and configure system as a wireless access point
-    # disable-unused-services
+    disable-unused-services
+    setup-hid-devices
+    setup-network
+    create-usb-image
 }
 
 config() {
@@ -68,19 +72,19 @@ install-dev-tools() {
     sudo apt-get -y install python3-pip python3-dev
     
     # Install NodeJS
-    if ! which npm > /dev/null; then
-        sudo apt install -y nodejs npm
-        sudo npm install --global yarn
-    fi
+    #if ! which npm > /dev/null; then
+    #    sudo apt install -y nodejs npm
+    #    sudo npm install --global yarn
+    #fi
     
     # Install golang
     #sudo apt-get install golang
-    install-golang-latest
+    #install-golang-latest
     
     # Install rust
-    if ! which cargo > /dev/null; then
-        curl https://sh.rustup.rs -sSf | bash -s -- -y
-    fi
+    #if ! which cargo > /dev/null; then
+    #    curl https://sh.rustup.rs -sSf | bash -s -- -y
+    #fi
 }
 
 upgrade-nodejs() {
@@ -129,6 +133,24 @@ EOF
     source ~/.profile
 }
 
+install-opsec-tools() {
+    # nmap:         Nmap ("Network Mapper") is an open source tool for network exploration and security auditing. 
+    # dirbuster:    DirBuster is a multi threaded java application designed to brute force directories and files names on web/application servers.
+    # gobuster:     Discover directories and files that match in the wordlist (written on golang)
+    sudo apt install -y nmap gobuster #dirbuster
+
+    # Install hugo (static site generator)
+    #sudo apt install -y hugo
+    CGO_ENABLED=1 \
+    go install -tags extended github.com/gohugoio/hugo@latest
+
+    # Install taskfile as a golang package
+    go install github.com/go-task/task/v3/cmd/task@latest
+
+    # Build rustscan from sources
+    build-rustscan
+}
+
 install-access-point() {
     # Create a backup of the original resolve file (before installing dnsmasq)
     if [ ! -f "/tmp/resolv.conf" ]
@@ -144,8 +166,21 @@ install-access-point() {
     sudo apt-get -y install dnsmasq hostapd bridge-utils ethtool
     
     # After install of dnsmasq, the nameserver in /etc/resolv.conf is set to 127.0.0.1, so we replace it with 8.8.8.8
-    sudo bash -c "cat /tmp/resolv.conf > /etc/resolv.conf"
-    sudo bash -c "echo nameserver 8.8.8.8 >> /etc/resolv.conf"  # append 8.8.8.8 as fallback secondary dns
+    if ! cat /etc/resolv.conf | grep "nameserver 8.8.8.8" > /dev/null
+    then
+        sudo cp /etc/resolv.conf /tmp/resolv.bak    
+        sudo bash -c "cat /tmp/resolv.conf > /etc/resolv.conf"
+        sudo bash -c "echo nameserver 8.8.8.8 >> /etc/resolv.conf"  # append 8.8.8.8 as fallback secondary dns
+    fi
+}
+
+install-cryptography-tools() {
+    # pycrypto:     Python Cryptography Toolkit (pycrypto). This is a collection of both secure hash functions (such as SHA256 and RIPEMD160), and various encryption algorithms
+    # pydispatcher: PyDispatcher provides the Python programmer with a multiple-producer-multiple-consumer signal-registration and routing infrastructure
+    #python3 -m venv .venv
+    #source .venv/bin/activate
+    sudo pip install pycrypto --break-system-packages
+    sudo pip install pydispatcher --break-system-packages
 }
 
 install-network-tools() {
@@ -162,28 +197,6 @@ install-network-tools() {
     sudo apt-get -y install dnsutils screen inotify-tools autossh bluez bluez-tools policykit-1 tshark tcpdump iodine
 }
 
-install-cryptographics() {
-    # pycrypto:     Python Cryptography Toolkit (pycrypto). This is a collection of both secure hash functions (such as SHA256 and RIPEMD160), and various encryption algorithms
-    # pydispatcher: PyDispatcher provides the Python programmer with a multiple-producer-multiple-consumer signal-registration and routing infrastructure
-    sudo pip install pycrypto
-    sudo pip install pydispatcher
-}
-
-install-opsec-tools() {
-    # nmap:         Nmap ("Network Mapper") is an open source tool for network exploration and security auditing. 
-    # dirbuster:    DirBuster is a multi threaded java application designed to brute force directories and files names on web/application servers.
-    # gobuster:     Discover directories and files that match in the wordlist (written on golang)
-    sudo apt install -y nmap gobuster #dirbuster
-
-    # Install hugo (static site generator)
-    #sudo apt install -y hugo
-    CGO_ENABLED=1 \
-    go install -tags extended github.com/gohugoio/hugo@latest
-
-    # Install taskfile as a golang package
-    go install github.com/go-task/task/v3/cmd/task@latest
-}
-
 install-wordlist() {
     git clone https://gitlab.com/kalilinux/packages/dirbuster.git /opt/lists
 }
@@ -196,20 +209,45 @@ install-linpeas() {
 }
 
 disable-unused-services() {
-    echo "Disabeling unneeded services to shorten boot time ..."
+    echo "Disable un-used services (shorten boot time)..."
     sudo update-rc.d ntp disable # not needed for stretch (only jessie)
     sudo update-rc.d avahi-daemon disable
     sudo update-rc.d dhcpcd disable
     sudo update-rc.d networking disable
     sudo update-rc.d avahi-daemon disable
     sudo update-rc.d dnsmasq disable # we start this by hand later on
+
+    echo "Enable SSH server..."
+    sudo update-rc.d ssh enable
 }
 
 setup-hid-devices() {
-    echo "Create udev rule for HID devices..."
-    # rule to set access rights for /dev/hidg* to 0666
-    echo 'SUBSYSTEM=="hidg",KERNEL=="hidg[0-9]", MODE="0666"' > /tmp/udevrule
-    sudo bash -c 'cat /tmp/udevrule > /lib/udev/rules.d/99-usb-hid.rules'
+    if [ ! -f "/lib/udev/rules.d/99-usb-hid.rules" ]
+    then
+        echo "Create udev rule for HID devices..."
+        # rule to set access rights for /dev/hidg* to 0666
+        echo 'SUBSYSTEM=="hidg",KERNEL=="hidg[0-9]", MODE="0666"' > /tmp/udevrule
+        sudo bash -c 'cat /tmp/udevrule > /lib/udev/rules.d/99-usb-hid.rules'
+    fi
+}
+
+setup-network() {
+    # set manual configuration for usb0 (RNDIS) if not already done
+    echo "Checking network setup.."
+    if ! grep -q -E '^iface usb0 inet manual$' /etc/network/interfaces; then
+        echo "Entry for manual configuration of RNDIS interface not found, adding..."
+        sudo /bin/bash -c "printf '\niface usb0 inet manual\n' >> /etc/network/interfaces"
+    else
+        echo "Entry for manual configuration of RNDIS interface found"
+    fi
+
+    # set manual configuration for usb1 (CDC ECM) if not already done
+    if ! grep -q -E '^iface usb1 inet manual$' /etc/network/interfaces; then
+        echo "Entry for manual configuration of CDC ECM interface not found, adding..."
+        sudo /bin/bash -c "printf '\niface usb1 inet manual\n' >> /etc/network/interfaces"
+    else
+        echo "Entry for manual configuration of CDC ECM interface found"
+    fi
 }
 
 build-rustscan() {
@@ -222,10 +260,51 @@ build-rustscan() {
 
 create-usb-image() {
     # create 128 MB image for USB storage
-    echo "Creating 128 MB image for USB Mass Storage emulation"
-    mkdir -p $THIS_DIR/USB_STORAGE
-    dd if=/dev/zero of=$THIS_DIR/USB_STORAGE/image.bin bs=1M count=128
-    mkdosfs $THIS_DIR/USB_STORAGE/image.bin
+    if [ ! -f "$THIS_DIR/USB_STORAGE/image.bin" ]
+    then
+        echo "Creating 128 MB image for USB Mass Storage emulation"
+        mkdir -p $THIS_DIR/USB_STORAGE
+        dd if=/dev/zero of=$THIS_DIR/USB_STORAGE/image.bin bs=1M count=128
+        mkdosfs $THIS_DIR/USB_STORAGE/image.bin
+    fi
+}
+
+create-startup-script() {
+    local app_path="~/app"
+    local app_repo="https://github.com/JohnnyBeProgramming/pi-zero.git"
+
+    if [ ! -d "$app_path" ]
+    then
+        git clone $app_repo $app_path
+    fi
+
+    # create systemd service unit for startup and persistence
+    # Note: switched to multi-user.target to make nexmon monitor mode work
+    if [ ! -f /etc/systemd/system/opsec.service ]; then
+        echo "Injecting 'opsec' startup script..."
+        cat <<- EOF | sudo tee /etc/systemd/system/opsec.service > /dev/null
+                [Unit]
+                Description=OpSec Startup Service
+                #After=systemd-modules-load.service
+                After=local-fs.target
+                DefaultDependencies=no
+                Before=sysinit.target
+
+                [Service]
+                #Type=oneshot
+                Type=forking
+                RemainAfterExit=yes
+                ExecStart=/bin/bash $app_path/boot/boot_app
+                StandardOutput=journal+console
+                StandardError=journal+console
+
+                [Install]
+                WantedBy=multi-user.target
+                #WantedBy=sysinit.target
+EOF
+fi
+
+    sudo systemctl enable opsec.service
 }
 
 # Bootstrap the script
