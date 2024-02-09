@@ -7,17 +7,42 @@ OPSEC_USER=${OPSEC_USER:-"admin"}
 OPSEC_LANG=${OPSEC_LANG:-$LANG}
 OPSEC_FILE=$OPSEC_DIR/.profile.sh
 
-echo "========================= OpSec tools starting up ======================"
-
 run() {
-    config $@
-    
+	echo "========================= OpSec tools starting up ======================"
+    config $@ # Load config settings
+	
+	# Initialise all the modules
 	usb-init
     wifi-init
+
+	# Post installation advice
+	echo
+	echo "===================================================================================="
+	echo "If you came till here without errors, you shoud be good to go with your P4wnP1..."
+	echo "...if not - sorry, you're on your own, as this is work in progress"
+	echo 
+	echo "Attach P4wnP1 to a host and you should be able to SSH in with pi@172.16.0.1 (via RNDIS/CDC ECM)"
+	echo
+	echo "If you use a USB OTG adapter to attach a keyboard, P4wnP1 boots into interactive mode"
+	echo
+	echo "If you're using a Pi Zero W, a WiFi AP should be opened. You could use the AP to setup P4wnP1, too."
+	echo "          WiFi name:    P4wnP1"
+	echo "          Key:          MaMe82-P4wnP1"
+	echo "          SSH access:    pi@172.24.0.1 (password: raspberry)"
+	echo
+	echo "  or via Bluetooth NAP:    pi@172.26.0.1 (password: raspberry)"
+	echo
+	echo "Go to your installation directory. From there you can alter the settings in the file 'setup.env',"
+	echo "like payload and language selection"
+	echo 
+	echo "If you're using a Pi Zero W, give the HID backdoor a try ;-)"
+	echo
+	echo "You need to reboot the Pi now!"
+	echo "===================================================================================="
 }
 
 config() {
-    echo "OpSec: Loading config ..."
+    echo "[ opsec ] Loading config ..."
     
     # Load the basic config (if present)
     if [ -f $OPSEC_DIR/setup.env ]
@@ -36,7 +61,7 @@ config() {
     
     # Create bash script which could be altered from /home/admin/.profile
     # --------------------------------------------------------------
-    echo "OpSec: Profile $OPSEC_FILE"
+    echo "[ opsec ] Profile $OPSEC_FILE"
 	cat << EOF >> $OPSEC_FILE
 #!/bin/bash
 OPSEC_DIR=$OPSEC_DIR
@@ -57,17 +82,21 @@ EOF
 wifi-check() {
     if ! iwconfig 2>&1 | grep -q -E ".*wlan0.*"; then
         echo "...[Error] no wlan0 interface found"
-        exit 1
+        return 1
     fi
-    exit 0
+    return 0
 }
 
 wifi-init() {
-    echo "OpSec: Checking for WiFi capabilities..."
-    if wifi-check; then WIFI=true; else WIFI=false; fi
-    if $WIFI; then
-        echo "OpSec: Seems WiFi module is present!"
-        iw reg set $WIFI_REG
+    echo "[ opsec ] Checking for WiFi capabilities..."
+    if wifi-check; then
+        echo "[ opsec ] Seems WiFi module is present!"
+
+        iw reg set $WIFI_REG || FAILED=true
+		if $FAILED; then
+			echo "[ opsec ] Failed to configure WiFi zone!"
+			return 1
+		fi
         
         # start WIFI client
         if $WIFI_CLIENT; then
@@ -76,7 +105,7 @@ wifi-init() {
             if wifi-client-start; then
                 WIFI_CLIENT_CONNECTION_SUCCESS=true
             else
-                echo "OpSec: Join present WiFi didn't succeed, failing over to access point mode"
+                echo "[ opsec ] Join present WiFi didn't succeed, failing over to access point mode"
                 WIFI_CLIENT_CONNECTION_SUCCESS=false
             fi
         fi
@@ -85,7 +114,7 @@ wifi-init() {
         # - if WiFi client mode is disabled and ACCESPOINT mode is enabled
         # - if WiFi client mode is enabled, but failed and ACCESPOINT mode is enabled
         if $WIFI_ACCESSPOINT && ( ! $WIFI_CLIENT_CONNECTION_SUCCESS || ! $WIFI_CLIENT); then
-            start_wifi_accesspoint
+            wifi-access-point-start
             
             # check if acces point is up and trigger callback
             # Warning!!! This uses the SSID and isn't tested against hidden SSID configurations
@@ -319,10 +348,10 @@ EOF
 usb-init() {
 	# early out if OpSec is used in OTG mode
 	if [ -f /sys/kernel/debug/20980000.usb/state ] && grep -q "DCFG=0x00000000" /sys/kernel/debug/20980000.usb/state; then
-		echo "OpSec: Detected to run in Host (interactive) mode, we abort device setup now!"
+		echo "[ opsec ] Detected to run in Host (interactive) mode, we abort device setup now!"
 		exit
 	else
-		echo "OpSec: Not an USB gadget, continue..."
+		echo "[ opsec ] Not an USB gadget, continue..."
 	fi
 
 
@@ -337,7 +366,7 @@ usb-init() {
 	fi
 }
 usb-ethernet-init() {
-	echo "OpSec: Initializing Ethernet over USB..."
+	echo "[ opsec ] Initializing Ethernet over USB..."
     (
         usb-ethernet-active-interface
         
@@ -443,7 +472,7 @@ usb-ethernet-active-interface() {
 }
 usb-ethernet-create-dhcp-config() {
 	# create DHCP config file for dnsmasq
-	echo "OpSec: Creating DHCP configuration for Ethernet over USB..."
+	echo "[ opsec ] Creating DHCP configuration for Ethernet over USB..."
 
 	cat <<- EOF > /tmp/dnsmasq_usb_eth.conf
 		bind-interfaces
