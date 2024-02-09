@@ -3,14 +3,17 @@
 # This script is used to initialise a (Debian) rasberry pi device,
 # and installs the following:
 #  - Latest system updates and patches
-#  - Enables SSH for remote connections
+#  - Enables SSH for remote connections (if not already done)
 #  - Developer tools such as python, node, golang and rust
 #  - Some tools used for network mapping and DNS lookup
 #  - Software to turn the device into an access point
 # --------------------------------------------------------------
-APP_NAME="opsec"
-APP_HOME="$HOME/app"
-APP_REPO="https://github.com/JohnnyBeProgramming/pi-zero.git"
+
+config() {
+    APP_NAME="opsec"
+    APP_HOME="$HOME/app"
+    APP_REPO="https://github.com/JohnnyBeProgramming/pi-zero.git"    
+}
 
 main() {
     # Setup basic config and enable SSH (if not already activated)
@@ -34,11 +37,6 @@ main() {
     setup-hid-devices
     setup-network
     create-usb-image
-}
-
-config() {
-    THIS_DIR=$(cd $(dirname $BASH_SOURCE[0]) && pwd)
-    HAS_WIFI=$(has-wifi && true || false)
 }
 
 enable-ssh() {
@@ -264,12 +262,13 @@ build-rustscan() {
 
 create-usb-image() {
     # create 128 MB image for USB storage
-    if [ ! -f "$THIS_DIR/USB_STORAGE/image.bin" ]
+    local usb_img="$APP_HOME/usb/image.bin"
+    if [ ! -f "$usb_img" ]
     then
         echo "Creating 128 MB image for USB Mass Storage emulation"
-        mkdir -p $THIS_DIR/USB_STORAGE
-        dd if=/dev/zero of=$THIS_DIR/USB_STORAGE/image.bin bs=1M count=128
-        mkdosfs $THIS_DIR/USB_STORAGE/image.bin
+        mkdir -p $(dirname $usb_path)
+        dd if=/dev/zero of=$usb_img bs=1M count=128
+        mkdosfs $usb_img
     fi
 }
 

@@ -1,12 +1,21 @@
 # Setting up a Raspberry Pi Zero W
 
-This repository contains the required scripts and setup to deploy some tools to a Raspberri Pi.
+This repository contains automation scripts to deploy a set of payloads to a Raspberri Pi Zero.
+
+The following features are supported:
+
+ - Enable SSH (if not already enabled) and run on system startup
+ - Check for internet connection, and update system OS to latest
+ - Install developer tools (eg: git, python, sqlite, rust, golang)
+ - Install wireless access point tools (eg: to create a wifi hotspot)
+ - Install network tools that can be used to capture and analize network packets
+
 
 # Prerequisites
 
 We assume you have the following:
 
- - Raspberri Pi with a wireless network card (eg: Raspberry Pi Zero)
+ - Raspberri Pi Zero, with a wireless network card
  - The device is connected to the internet and/or your locaal network
  - Valid SSH credentials and hostname is available and ready to conect
 
@@ -17,8 +26,8 @@ ssh admin@respberrypi.local whoami
 
 # Installation steps
 
-To simplify and streamline the installation, the `install.sh` was created
-to allow us to automate most of the setup of the pi zero.
+To simplify and streamline the installation process, we created the `install.sh` 
+script, to install required dependencies and setup the pi zero for use.
 
 ## Option 1: From your host machine, install over ssh
 ```bash
@@ -32,12 +41,4 @@ sudo apt install git
 git clone --recursive https://github.com/JohnnyBeProgramming/pi-zero.git
 sudo ./pi-zero/install.sh
 ```
-
-This script will install all the required tools we need on the device:
-
- - Enable SSH (if not already enabled) and run on system startup
- - Check for internet connection, and update system OS to latest
- - Install developer tools (eg: git, python, sqlite, rust, golang)
- - Install wireless access point tools (eg: to create a wifi hotspot)
- - Install network tools that can be used to capture and analize network packets
 

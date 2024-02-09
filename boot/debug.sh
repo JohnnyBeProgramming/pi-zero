@@ -3,7 +3,6 @@
 # Simple debug script to check service status
 # --------------------------------------------------------------------
 APP_NAME="opsec"
-APP_HOME="$HOME/app"
 
 
 case $1 in
