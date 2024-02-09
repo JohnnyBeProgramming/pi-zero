@@ -7,7 +7,7 @@
 # Because of this fact the settings of setup.env and the current payload have
 # to be imported, without executing the payload again.
 # --------------------------------------------------------------------
-THIS_DIR=$(cd $(dirname $0) && pwd)
+THIS_DIR=$(cd $(dirname $BASH_SOURCE[0]) && pwd)
 OPSEC_DIR=$(cd $THIS_DIR && cd .. && pwd)
 
 # include setup.env (calling source is fine, as no code should be included)

@@ -37,7 +37,7 @@ main() {
 }
 
 config() {
-    THIS_DIR=$(cd $(dirname $0) && pwd)
+    THIS_DIR=$(cd $(dirname $BASH_SOURCE[0]) && pwd)
     HAS_WIFI=$(has-wifi && true || false)
 }
 

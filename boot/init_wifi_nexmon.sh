@@ -10,7 +10,7 @@
 # Nexmon by [@seemoo-lab](https://github.com/seemoo-lab) (NexMon Team) is licensed under GNU General Public License v3.0. The sources used to compile could be found here:
 # https://github.com/seemoo-lab/nexmon/tree/917ee86913ba2826e9525e08929937bf764822b8
 
-THIS_DIR=$(cd $(dirname $0) && pwd)
+THIS_DIR=$(cd $(dirname $BASH_SOURCE[0]) && pwd)
 
 nexmondir="$OPSEC_DIR/nexmon"
 

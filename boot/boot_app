@@ -2,7 +2,7 @@
 # --------------------------------------------------------------
 # This script starts a system service rasberry pi device
 # --------------------------------------------------------------
-THIS_DIR=$(cd $(dirname $0) && pwd)
+THIS_DIR=$(cd $(dirname $BASH_SOURCE[0]) && pwd)
 
 OPSEC_DIR=$(cd $THIS_DIR && cd .. && pwd)
 OPSEC_USER="${OPSEC_USER:-admin}"

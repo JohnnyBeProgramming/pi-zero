@@ -2,7 +2,7 @@
 # --------------------------------------------------------------
 # This script starts a system service rasberry pi device
 # --------------------------------------------------------------
-THIS_DIR=$(cd $(dirname $0) && pwd)
+THIS_DIR=$(cd $(dirname $BASH_SOURCE[0]) && pwd)
 
 OPSEC_DIR="$HOME/app"
 OPSEC_USER="${OPSEC_USER:-admin}"
@@ -25,6 +25,7 @@ $(declare -f onLogin)
 EOF
 chown $OPSEC_USER:$OPSEC_USER $OPSEC_FILE
 # --------------------------------------------------------------
+exit 0
 
 echo "OpSec: Checking for WiFi capabilities ..."
 source $THIS_DIR/init_wifi.sh

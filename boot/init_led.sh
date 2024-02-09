@@ -2,7 +2,7 @@
 # --------------------------------------------------------------------
 # Start LED controller script and provide funtion to set blink count
 # --------------------------------------------------------------------
-THIS_DIR=$(cd $(dirname $0) && pwd)
+THIS_DIR=$(cd $(dirname $BASH_SOURCE[0]) && pwd)
 
 # create control file and change owner (otherwise it would be created by ledtool.py
 # with owner root, and thus not writable by user)
