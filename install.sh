@@ -10,19 +10,24 @@
 # --------------------------------------------------------------
 
 config() {
-    APP_NAME="opsec"
-    APP_HOME="$HOME/app"
+    # Set the core installation config settings
     APP_REPO="https://github.com/JohnnyBeProgramming/pi-zero.git"    
+    APP_BOOT="/boot"
+    APP_NAME="opsec"
+    APP_USER=${USER:-"admin"}
+    APP_HOME="${HOME}/app"
 }
 
 main() {
-    # Setup basic config and enable SSH (if not already activated)
+    # Setup basic config and check for an active internet connection
     config $@
-    #enable-ssh
+    check-internet
+
+    # Update OS packages to their latest versions
+    update-os
     
-    # First we check for an internet connection, and update the OS
-    #check-internet
-    #update-os
+    # Enable SSH (if not already activated)
+    #enable-ssh
     
     # Install the required packages onto the raspberry pi
     install-dev-tools
@@ -39,19 +44,24 @@ main() {
     create-usb-image
 }
 
-enable-ssh() {
-    # Enable SSH on the system
-    sudo systemctl enable ssh
-    sudo systemctl start ssh
+update-os() {
+    sudo apt update
+    sudo apt full-upgrade -y
 }
 
 check-internet() {
     echo "Testing Internet connection and name resolution..."
     if [ "$(curl -s http://www.msftncsi.com/ncsi.txt)" != "Microsoft NCSI" ]; then
-        echo "Error: No Internet connection or name resolution doesn't work! Exiting..."
+        echo "Error: No Internet connection or name resolution doesn't work! Exiting!"
         exit
     fi
-    echo "Passed: Internet connection works"
+    echo "Internet connection established for $(hostname)..."
+}
+
+enable-ssh() {
+    # Enable SSH on the system
+    sudo systemctl enable ssh
+    sudo systemctl start ssh
 }
 
 has-wifi() {
@@ -60,11 +70,6 @@ has-wifi() {
         exit 1
     fi
     exit 0
-}
-
-update-os() {
-    sudo apt update
-    sudo apt full-upgrade -y
 }
 
 install-dev-tools() {
