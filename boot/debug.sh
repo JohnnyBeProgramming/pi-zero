@@ -9,7 +9,7 @@ APP_HOME="$HOME/app"
 systemctl --type=service
 
 # Show boot logs
-journalctl -b
+#journalctl -b
 
 # Show the service logs
 journalctl -u "$APP_NAME.service"

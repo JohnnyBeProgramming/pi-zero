@@ -2,8 +2,8 @@
 # --------------------------------------------------------------
 # This script starts a system service rasberry pi device
 # --------------------------------------------------------------
-OPSEC_DIR=${OPSEC_DIR:-"$HOME/app"}
 OPSEC_USER=${OPSEC_USER:-"admin"}
+OPSEC_DIR=${OPSEC_DIR:-"/home/$OPSEC_USER/app"}
 OPSEC_LANG=${OPSEC_LANG:-$LANG}
 OPSEC_FILE=$OPSEC_DIR/.profile.sh
 
