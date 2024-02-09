@@ -29,7 +29,7 @@ cat ./install.sh | ssh admin@respberrypi.local
 ## Option 2: On the raspberry pi zero, install from git
 ```bash
 sudo apt install git
-git clone https://github.com/JohnnyBeProgramming/pi-zero.git
+git clone --recursive https://github.com/JohnnyBeProgramming/pi-zero.git
 sudo ./pi-zero/install.sh
 ```
 

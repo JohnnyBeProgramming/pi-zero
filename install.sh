@@ -83,6 +83,12 @@ install-dev-tools() {
     fi
 }
 
+upgrade-nodejs() {
+    sudo npm cache clean -f
+    sudo npm install -g n
+    sudo n stable
+}
+
 upgrade-python-version() {
     local tag="3.11.5"
     local bin="python3.11"
@@ -170,10 +176,12 @@ install-opsec-tools() {
     sudo apt install -y nmap gobuster #dirbuster
 
     # Install hugo (static site generator)
-    sudo apt install -y hugo
+    #sudo apt install -y hugo
+    CGO_ENABLED=1 \
+    go install -tags extended github.com/gohugoio/hugo@latest
 
     # Install taskfile as a golang package
-    go install github.com/go-task/task/v3/cmd/task@latest    
+    go install github.com/go-task/task/v3/cmd/task@latest
 }
 
 install-wordlist() {

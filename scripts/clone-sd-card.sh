@@ -21,8 +21,8 @@ else
 fi
 
 # Convert to image for QEMU (UTM) virtualisation
-if which qemu-img > /dev/null
-then
-    echo "Converting to a VM image: $2.qcow2"
-    qemu-img convert -f raw -O qcow2 $2 $2.qcow2
-fi
+#if which qemu-img > /dev/null
+#then
+#    echo "Converting to a VM image: $2.qcow2"
+#    qemu-img convert -f raw -O qcow2 $2 $2.qcow2
+#fi
