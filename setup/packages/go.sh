@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# --------------------------------------------------------------
+set -euo pipefail # Stop running the script on first error...
+# --------------------------------------------------------------
 
 # Install golang
 #sudo apt-get install golang
