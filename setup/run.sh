@@ -45,8 +45,8 @@ main() {
 
 check-deps() {
     # Do some pre-checks to ensure we have internet and a valid architecture
-    #check-arch || fail "Architecture $OSTYPE ($(uname -m)) not supported"
-    #check-internet || fail "No internet connection could be established."
+    check-arch || fail "Architecture $OSTYPE ($(uname -m)) not supported"
+    check-internet || fail "No internet connection could be established."
     check-setup-media || fail "Setup failed to find installation media in:\n - $THIS_DIR"
 }
 
