@@ -11,50 +11,40 @@
 
 config() {
     # Set the core installation config settings
-    TEST_URL="http://www.msftncsi.com/ncsi.txt"
-    TEST_VAL="Microsoft NCSI"
-    
-    APP_BOOT="/boot"
-    APP_NAME="opsec"
-    APP_USER=${USER:-$APP_NAME}
-    APP_HOME="${HOME}/app"
+    APP_NAME="opsec"                # Name of the application that will be installed
+    APP_BOOT="/boot"                # Default location to look for installation files
+    APP_USER=${USER:-$APP_NAME}     # The user associated with the system process
+    APP_HOME="${HOME}/app"          # Default installation target folder
+    APP_REPO="https://github.com/JohnnyBeProgramming/pi-zero.git"    
 }
 
 main() {
     # Setup basic config and check for an active internet connection
     config $@
     
-    # Check if we have an active internet connection
-    if ! check-arch; then
-        echo "FATAL: Architecture $OSTYPE ($(uname -m)) not supported"
-        exit 1
-    fi
-
-    if ! check-internet; then
-        # Without internet, we cannot install any additional tools
-        echo "FATAL: No internet connection could be established."
-        exit 1
-    else
-        # Update OS packages to their latest versions
-        update-os
-        
-        # Setup defaults
-        setup-defaults
-    fi
+    # Do some pre-checks to ensure we have internet and a valid architecture
+    check-arch || fail "Architecture $OSTYPE ($(uname -m)) not supported"
+    check-internet || fail "No internet connection could be established."
+    
+    # Update operating system packages to their latest versions
+    update-os
+    
+    # Setup defaults
+    setup-features
 }
 
 check-arch() {
-    if [ -f "/etc/debian_version" ]; then
-        return 0
-    fi
-    return 1
+    # Make sure we are running debian
+    [ -f "/etc/debian_version" ] || return 1
 }
 
 check-internet() {
+    TEST_URL="http://www.msftncsi.com/ncsi.txt"
+    TEST_VAL="Microsoft NCSI"
     echo "Testing internet connection & DNS resolution..."
     echo "[?] curl -s $TEST_URL == '$TEST_VAL'"
     TEST_RES=$(curl -s $TEST_URL)
-    if [ ! "$TEST_VAL" != "$TEST_RES" ]; then
+    if [ ! "$TEST_VAL" == "$TEST_RES" ]; then
         echo "[!] Error: No Internet connection, or name resolution doesn't work!"
         echo "----------------------------------------"
         echo "TEST_URL: $TEST_URL"
@@ -73,8 +63,15 @@ update-os() {
     sudo apt full-upgrade -y
 }
 
-setup-defaults() {
+setup-features() {
     echo "TODO: Setup additional features..."
+}
+
+fail() {
+    local red=$([ -z $TERM ] || printf "\033[0;31m")
+    local reset=$([ -z $TERM ] || printf "\033[0m")
+    printf "${red}FAIL: $1\n${reset}"
+    exit 1
 }
 
 # Bootstrap the script
