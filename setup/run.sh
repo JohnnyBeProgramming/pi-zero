@@ -10,8 +10,6 @@ set -euo pipefail # Stop running the script on first error...
 #  - Some tools used for network mapping and DNS lookup
 #  - Software to turn the device into an access point
 # --------------------------------------------------------------
-THIS_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
-THIS_FILE=$(basename "${BASH_SOURCE[0]}")
 
 config() {
     # Set the core installation config settings
@@ -20,11 +18,25 @@ config() {
     APP_USER=${USER:-$APP_NAME}     # The user associated with the system process
     APP_HOME="${HOME}/app"          # Default installation target folder
     APP_REPO="https://github.com/JohnnyBeProgramming/pi-zero.git"
+    
+    if [ ! -f "${BASH_SOURCE:-}" ]; then
+        # This script was probably piped, check for app home 
+        THIS_DIR="$APP_HOME/setup"
+        THIS_FILE="run.sh"
+    elif [ ! -z "${BASH_SOURCE:-}" ]; then
+        # Resolve the current script folder
+        THIS_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+        THIS_FILE=$(basename "${BASH_SOURCE[0]}")
+    else
+        THIS_DIR="$APP_HOME/setup"
+        THIS_FILE="run.sh"
+    fi
 }
 
 main() {
     # Setup basic config and check for an active internet connection
     config $@
+    colors
     check-deps
     
     # Update operating system packages to their latest versions
@@ -81,11 +93,9 @@ update-os() {
 }
 
 install-packages() {
-    colors
-
     local config="$THIS_DIR/setup.ini"    
     if [ -f "$config" ]; then
-        echo "${bold}Installing additional packages...${reset}"
+        echo "${bold}Checking packages...${reset}"
         cat $config | sed -e 's/[[:space:]]*#.*// ; /^[[:space:]]*$/d' | while IFS= read -r line; do
             local name=$(echo "$line" | cut -d '=' -f1)
             local tags=$(echo "$line" | cut -d '=' -f2)
@@ -158,11 +168,9 @@ upgrade-package() {
 }
 
 install-services() {
-    colors
-
     local config="$THIS_DIR/services.ini"
     if [ -f "$config" ]; then
-        echo "${bold}Installing additional services...${reset}"
+        echo "${bold}Checking services...${reset}"
         cat $config | sed -e 's/[[:space:]]*#.*// ; /^[[:space:]]*$/d' | while IFS= read -r line; do
             local name=$(echo "$line" | cut -d '=' -f1)
             local tags=$(echo "$line" | cut -d '=' -f2)
@@ -174,8 +182,7 @@ install-services() {
     fi
 }
 
-fail() {
-    colors
+fail() {    
     printf "${red}FAIL: $1\n${reset}"
     exit 1
 }
