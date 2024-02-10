@@ -19,11 +19,7 @@ config() {
     APP_HOME="${HOME}/app"          # Default installation target folder
     APP_REPO="https://github.com/JohnnyBeProgramming/pi-zero.git"
     
-    if [ ! -f "${BASH_SOURCE:-}" ]; then
-        # This script was probably piped, check for app home 
-        THIS_DIR="$APP_HOME/setup"
-        THIS_FILE="run.sh"
-    elif [ ! -z "${BASH_SOURCE:-}" ]; then
+    if [ -f "${BASH_SOURCE:-}" ]; then
         # Resolve the current script folder
         THIS_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
         THIS_FILE=$(basename "${BASH_SOURCE[0]}")
@@ -40,7 +36,7 @@ main() {
     check-deps
     
     # Update operating system packages to their latest versions
-    #update-os
+    update-os
     
     # Setup defaults
     install-packages
@@ -93,7 +89,7 @@ update-os() {
 }
 
 install-packages() {
-    local config="$THIS_DIR/setup.ini"    
+    local config="$THIS_DIR/setup.ini"
     if [ -f "$config" ]; then
         echo "${bold}Checking packages...${reset}"
         cat $config | sed -e 's/[[:space:]]*#.*// ; /^[[:space:]]*$/d' | while IFS= read -r line; do
@@ -103,8 +99,8 @@ install-packages() {
             local label="${bold}${name}${reset}"
             local version="${dim}(${tags})${reset}"
             local upgrade=false
-
-            # Check if the package is installed and up to date            
+            
+            # Check if the package is installed and up to date
             if [ "$tags" == "*" ] && [ ! -z "$(which $name)" ]; then
                 # Up to date...
                 prefix="${dim}[ ${green}✔${dim} ]${reset}"
@@ -115,7 +111,7 @@ install-packages() {
                 found=$(apt show $name 2> /dev/null | grep "Version: " | cut -d ':' -f2- | tr -d ' ' || true)
                 version="${dim}($found)${reset}"
             fi
-
+            
             # Check if we need to upgrade
             if [ ! -z "${found:-}" ] && [[ "$found" < "$tags" ]]
             then
@@ -129,10 +125,10 @@ install-packages() {
                 version="${dim}(${green}$tags${dim})${reset}"
                 upgrade=true
             fi
-
+            
             # Print package and its current state
             printf "${prefix} ${label} ${version} "
-
+            
             # Upgrade package (if needed)
             if $upgrade; then
                 printf "${dim}...${dim}\n"
@@ -154,7 +150,7 @@ install-packages() {
 upgrade-package() {
     local name=$1
     local tags=${2:-}
-
+    
     if [ -f "$THIS_DIR/packages/$name.sh" ]; then
         # Run the included setup script
         bash "$THIS_DIR/packages/$name.sh" || return 1
@@ -162,9 +158,9 @@ upgrade-package() {
         # Install using package manager
         sudo apt-get -y install $name || return 1
     fi
-
+    
     # Reset color in terminal to normal
-    printf "${reset}"     
+    printf "${reset}"
 }
 
 install-services() {
@@ -173,16 +169,54 @@ install-services() {
         echo "${bold}Checking services...${reset}"
         cat $config | sed -e 's/[[:space:]]*#.*// ; /^[[:space:]]*$/d' | while IFS= read -r line; do
             local name=$(echo "$line" | cut -d '=' -f1)
-            local tags=$(echo "$line" | cut -d '=' -f2)
-            local prefix="${dim}[ ${green}✔${dim} ]${reset}"
-            local label="${bold}${name}${reset}"
-            local version="${dim}(${tags})${reset}"
-            echo "${prefix} ${label} ${version} ${reset}"
+            local enable=$(echo "$line" | cut -d '=' -f2)
+            local prefix="${dim}[ ${dim}-${dim} ]${reset}"
+            local label="${dim}${name}${reset}"
+            local status="${dim}(${enable})${reset}"
+
+            # Check if service is installed
+            local found=$(systemctl is-enabled $name 2> /dev/null)
+            local old=$([ "${found:-}" == "enabled" ] && echo ON)
+            local new=$([ "${enable:-}" == "true" ] && echo ON)            
+            local action=""
+            if [ -z "${found:-}" ]; then
+                # Service not found...
+                prefix="${dim}[ ✘ ]${reset}"
+                status="${dim}(not installed)${reset}"
+                label="${dim}${name}${reset}"
+            elif [ ! -z "${old:-}" ] && [ ! -z "${new:-}" ]; then
+                # Service running and up to date
+                prefix="${dim}[ ${green}✔${dim} ]${reset}"
+                label="${bold}${name}${reset}"
+                status="${dim}(${green}running${dim})${reset}"
+            elif [ ! -z "${old:-}" ] && [ -z "${new:-}" ]; then
+                # Service should be disabled
+                prefix="${dim}[ ${blue}■${dim} ]${reset}"
+                label="${bold}${blue}${name}${reset}"
+                status="${dim}(${blue}stopping${dim})${reset}"
+                action="disable"
+            elif [ -z "${old:-}" ] && [ ! -z "${new:-}" ]; then
+                # Service needs to be started
+                prefix="${dim}[ ${green}▶${dim} ]${reset}"
+                label="${bold}${green}${name}${reset}"
+                status="${dim}(${green}starting${dim})${reset}"
+                action="enable"
+            else
+                # Unknown status
+                prefix="${dim}[ ${dim}■${dim} ]${reset}"
+                status="${dim}(${found:-})${reset}"
+            fi
+
+            echo "${prefix} ${label} ${status} ${reset}"
+
+            if [ ! -z "${action:-}" ]; then
+                sudo systemctl $action $name || fail "Failed to ${action} service: $name"
+            fi
         done
     fi
 }
 
-fail() {    
+fail() {
     printf "${red}FAIL: $1\n${reset}"
     exit 1
 }
