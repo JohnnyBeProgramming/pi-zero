@@ -6,7 +6,7 @@ set -euo pipefail # Stop running the script on first error...
 # Install golang
 #sudo apt-get install golang
 
-install-golang-latest() {
+setup() {
     local tag="1.21.4"
     local arch=$(uname -m)
     if ! go version | grep $tag > /dev/null; then
@@ -25,4 +25,4 @@ EOF
 }
 
 # Bootstrap setup script
-install-golang-latest
+setup $@
