@@ -36,7 +36,7 @@ main() {
     check-deps
     
     # Update operating system packages to their latest versions
-    update-os
+    #update-os
     
     # Setup defaults
     install-packages
@@ -58,21 +58,21 @@ check-arch() {
 check-internet() {
     TEST_URL="http://www.msftncsi.com/ncsi.txt"
     TEST_VAL="Microsoft NCSI"
-    echo "Testing internet connection & DNS resolution..."
-    echo "[?] curl -s $TEST_URL == '$TEST_VAL'"
+    printf "${white}${bold}Testing internet connection & DNS resolution...${reset}\n"
+    printf "${dim}[${blue}?${dim}] curl -s ${blue}$TEST_URL${dim} == ${white}'$TEST_VAL'${dim}${reset}\n"
     TEST_RES=$(curl -s $TEST_URL)
-    if [ ! "$TEST_VAL" == "$TEST_RES" ]; then
-        echo "[!] Error: No Internet connection, or name resolution doesn't work!"
+    if [ "$TEST_VAL" == "$TEST_RES" ]; then
+        echo "${dim}[${green}✔${dim}] Connection established from: ${blue}$(hostname)${reset}"
+        return 0
+    else
+        printf "${bold}${red}[!] Error: No Internet connection, or name resolution doesn't work!${reset}\n"
         echo "----------------------------------------"
         echo "TEST_URL: $TEST_URL"
         echo "TEST_VAL: $TEST_VAL (expected)"
         echo "TEST_RES: $TEST_RES"
         echo "----------------------------------------"
         return 1
-    fi
-    
-    echo "[✔] Connection established: $(hostname)"
-    return 0
+    fi    
 }
 
 check-setup-media() {
