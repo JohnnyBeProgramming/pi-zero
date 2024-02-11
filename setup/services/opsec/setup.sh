@@ -21,7 +21,7 @@ install-dependencies() {
     # gobuster:     Discover directories and files that match in the wordlist (written on golang)
     local require=("nmap" "gobuster" "dirbuster")
     local install=()
-    for pkg in $require; do 
+    for pkg in ${require[@]}; do 
         found=$(apt show $pkg 2> /dev/null | grep "Version: " | cut -d ':' -f2- | tr -d ' ' || true)
         echo "[ $pkg ] ... ($found)"
         if [ -z "${found:-}" ]; then
