@@ -60,7 +60,8 @@ install-service() {
     # Copy the latest service to the app folder
     if [ -d "$dest" ]; then
         # Make a backup of current folder
-        echo "Destination '$dest' exists, backing up..."
+        echo "Destination exists, backing up: $dest"
+        echo tar -zvf $dest.tar.gz -C $dest .
         tar -zvf $dest.tar.gz -C $dest .
     fi
 
