@@ -94,7 +94,7 @@ install-service() {
         echo "Starting service: $SETUP_NAME ..."
         sudo systemctl enable $SETUP_NAME.service
         sudo systemctl start $SETUP_NAME.service
-        journalctl -u $SETUP_NAME -e 
+        #journalctl -u $SETUP_NAME -e 
     fi        
 }
 
