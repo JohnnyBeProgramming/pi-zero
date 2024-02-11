@@ -8,6 +8,13 @@ setup() {
     SETUP_NAME=${1:-"$(basename $THIS_DIR)"}
     SETUP_PATH=${2:-$THIS_DIR}
 
+    # Prepare the application folder where the service will be installed
+    if [ -z "$APP_HOME" ]; then
+        echo "You need to define the \$APP_HOME ENV var."
+        echo "Aborting $SETUP_NAME service setup."
+        exit 1
+    fi
+
     # Install any dependencies used by this service (if not already installed)
     install-dependencies
 
@@ -43,43 +50,45 @@ install-dependencies() {
 }
 
 install-service() {
-    echo "TODO: Copy setup scripts to app home:"
-    echo " - [ $SETUP_NAME ] $SETUP_PATH -> ${APP_HOME:-}"
-    exit 0
+    local dest="$APP_HOME/.services/$SETUP_NAME"
+    local state=$(systemctl is-enabled $SETUP_NAME 2> /dev/null)
 
-    if [ ! -d "$APP_HOME" ]
-    then
-        # Pull the application sources from git
-        git clone $APP_REPO $APP_HOME
+    # Temporarily stop the service while we install
+    if [ "${state:-}" == "enabled" ]; then
+        echo "Stopping service '$SETUP_NAME'..."
+        sudo systemctl disable $SETUP_NAME.service
+    fi
+
+    # Copy the latest service to the app folder
+    if [ -d "$dest" ]; then
+        # Make a backup of current folder
+        echo "Destination '$dest' exists, backing up..."
+        tar -zcvf $dest.tar.gz $dest
+    fi
+
+    echo "Updating service: $SETUP_NAME ..."
+    cp -rf "$SETUP_PATH" "$dest"
+    
+    # Generate manifest from template if provided
+    if [ -f "$dest/service.cfg.tpl" ]; then
+        cat "$dest/service.cfg.tpl" | envsubst > "$dest/service.cfg"
+    fi
+
+    # Install the service manifest in systemd
+    if [ -f "$dest/service.cfg" ]; then
+        echo "Injecting '$SETUP_NAME' startup script..."
+        cat "$dest/service.cfg" > /etc/systemd/system/$SETUP_NAME.service 
+    else
+        echo "Warning: Not found '$dest/service.cfg', skipping..."
+        return 0
     fi
     
     # Create systemd service for startup and persistence
     # Note: switched to multi-user.target to make nexmon monitor mode work
-    if [ ! -f /etc/systemd/system/$APP_NAME.service ]; then
-        echo "Injecting 'opsec' startup script..."
-        cat <<- EOF | sudo tee /etc/systemd/system/$APP_NAME.service > /dev/null
-[Unit]
-Description=OpSec Startup Service
-#After=systemd-modules-load.service
-After=local-fs.target
-DefaultDependencies=no
-Before=sysinit.target
-
-[Service]
-#Type=oneshot
-Type=forking
-RemainAfterExit=yes
-ExecStart=/bin/bash $APP_HOME/boot/boot_simple
-StandardOutput=journal+console
-StandardError=journal+console
-
-[Install]
-WantedBy=multi-user.target
-#WantedBy=sysinit.target
-EOF
-    fi
-    
-    sudo systemctl enable $APP_NAME.service
+    if [ -f "/etc/systemd/system/$SETUP_NAME.service" ]; then
+        echo "Starting service '$SETUP_NAME'..."
+        sudo systemctl enable $SETUP_NAME.service
+    fi        
 }
 
 setup $@ # <-- Bootstrap the script
