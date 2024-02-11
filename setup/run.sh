@@ -59,13 +59,13 @@ check-internet() {
     TEST_URL="http://www.msftncsi.com/ncsi.txt"
     TEST_VAL="Microsoft NCSI"
     printf "${white}${bold}Testing internet connection & DNS resolution...${reset}\n"
-    printf "${dim}[${blue}?${dim}] curl -s ${href}$TEST_URL${dim} == ${white}'$TEST_VAL'${dim}${reset}\n"
+    printf "${dim}[ ${blue}?${dim} ] curl -s ${href}$TEST_URL${dim} == ${white}'$TEST_VAL'${dim}${reset}\n"
     TEST_RES=$(curl -s $TEST_URL)
     if [ "$TEST_VAL" == "$TEST_RES" ]; then
-        echo "${dim}[${green}✔${dim}] Connection established from: ${href}$(hostname)${reset}"
+        echo "${dim}[ ${green}✔${dim} ] Connection established from: ${href}$(hostname)${reset}"
         return 0
     else
-        printf "${bold}${red}[!] Error: No Internet connection, or name resolution doesn't work!${reset}\n"
+        printf "${bold}${red}[ ! ] Error: No Internet connection, or name resolution doesn't work!${reset}\n"
         echo "----------------------------------------"
         echo "TEST_URL: $TEST_URL"
         echo "TEST_VAL: $TEST_VAL (expected)"
