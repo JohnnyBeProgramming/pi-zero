@@ -12,21 +12,14 @@ config() {
     OPSEC_LANG=${OPSEC_LANG:-$LANG}
     OPSEC_FILE=$OPSEC_DIR/.profile
 
-    echo "[ opsec ] Loading config ..."
     
     # Load the basic config (if present)
-    if [ -f $OPSEC_DIR/setup.env ]
+    if [ -f $THIS_DIR/service.env ]
     then
-        echo " + $OPSEC_DIR/setup.env"
+        echo "[ opsec ] Loading config: $THIS_DIR/service.env"
         source $OPSEC_DIR/setup.env
-    fi
-    
-    # include payload (overrides variables set by setup.env if needed)
-    if [ ! -z "${PAYLOAD:-}" ] && [ -f $OPSEC_DIR/payloads/$PAYLOAD ]
-    then
-        # PAYLOAD itself is define in setup.env
-        echo " + $OPSEC_DIR/payloads/$PAYLOAD"
-        source $OPSEC_DIR/payloads/$PAYLOAD
+    else
+        echo "[ opsec ] Warning: No config found at $THIS_DIR/service.env"
     fi
     
     # Create bash script which could be altered from /home/admin/.profile

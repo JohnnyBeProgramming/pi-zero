@@ -72,9 +72,12 @@ install-service() {
     rsync -a "$SETUP_PATH/" "$dest"
     
     # Generate manifest from template if provided
+    export APP_HOME=$APP_HOME
     if [ -f "$dest/service.cfg.tpl" ]; then
-        export APP_HOME=$APP_HOME
         cat "$dest/service.cfg.tpl" | envsubst > "$dest/service.cfg"
+    fi
+    if [ -f "$dest/service.env.tpl" ]; then
+        cat "$dest/service.env.tpl" | envsubst > "$dest/service.env"
     fi
 
     # Install the service manifest in systemd
