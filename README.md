@@ -31,7 +31,7 @@ script, to install required dependencies and setup the pi zero for use.
 
 ## Option 1: From your host machine, install over ssh
 ```bash
-cat ./install.sh | ssh admin@respberrypi.local
+cat ./setup/install.sh | ssh admin@respberrypi.local
 # <-- Now you should be prompted for the ssh password, then it starts installing
 ```
 
@@ -39,6 +39,6 @@ cat ./install.sh | ssh admin@respberrypi.local
 ```bash
 sudo apt install git
 git clone --recursive https://github.com/JohnnyBeProgramming/pi-zero.git
-sudo ./pi-zero/install.sh
+sudo ./pi-zero/setup/install.sh
 ```
 

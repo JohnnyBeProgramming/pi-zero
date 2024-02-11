@@ -16,7 +16,7 @@ config() {
     
     if [ -z "${1:-}" ]; then
         echo "Please specify the volume volem to update."
-        echo "eg: $0 /path/to/volume"
+        echo "eg: $0 /Volumes/bootfs"
         echo 
         echo Hint: diskutil list external
         exit 1
@@ -31,6 +31,7 @@ main() {
     copy-setup
     update-config
     update-commands
+    update-first-run
     
     echo "Image updated."
 }
@@ -50,15 +51,15 @@ update-config() {
     [ -f "$file" ] || return 0
     [ -f "$file.bak" ] || cat $file > $file.bak
     
-    if cat $file | grep "dtoverlay=" > /dev/null; then
+    if cat $file | grep "dtoverlay=dwc2" > /dev/null; then
         # Already up to date
         return 0
     fi
     
     if cat $file | grep "dtoverlay=" > /dev/null
     then
-        echo "Configuring: dtoverlay=dwc2"
-        echo sed 's|dtoverlay=.*|dtoverlay=dwc2|'
+        echo " + $file: dtoverlay=dwc2"
+        sed -i '' 's|dtoverlay=.*|dtoverlay=dwc2|' $file
     fi
 }
 
@@ -73,9 +74,25 @@ update-commands() {
         return 0
     fi
     
-    echo "Update commandline.txt -> + modules-load=dwc2,g_ether"
-    echo sed 's|rootwait|rootwait modules-load=dwc2,g_ether|'
-    
+    # Add additional modules to command line at startup
+    echo " + $file - modules-load=dwc2,g_ether"
+    sed -i '' 's|rootwait|rootwait modules-load=dwc2,g_ether|' $file
+}
+
+update-first-run() {
+    file="$BOOT_DIR/firstrun.sh"
+
+    [ -f "$file" ] || return 0
+    [ -f "$file.bak" ] || cat $file > $file.bak
+    [ -f "$BOOT_DIR/setup/install.sh" ] || return 0
+
+    if cat $file | grep "/boot/setup/install.sh" > /dev/null; then
+        # Already up to date
+        return 0
+    fi
+
+    echo " + $file - attach setup script."
+    sed -i '' "s|rm -f /boot/firstrun.sh|/boot/setup/install.sh \nrm -f /boot/firstrun.sh|" $file    
 }
 
 # Bootstrap the script
