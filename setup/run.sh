@@ -230,7 +230,7 @@ install-custom-service() {
     # Check if there is a setup script
     if [ -f "$path/setup.sh" ] 
     then
-        printf "${dim}[ ${lblue}i${dim} ] ${white}${bold}$name (installing)${dim}\n"
+        printf "${dim}[ ${lblue}i${dim} ] ${white}${bold}$name (installing)${reset}${dim}\n"
         . "$path/setup.sh" "$name" "$path"
         printf "${reset}"
     fi
@@ -249,11 +249,11 @@ colors() {
     white=$([ -z $TERM ] || printf "\033[0;97m")
     red=$([ -z $TERM ] || printf "\033[0;31m")
     blue=$([ -z $TERM ] || printf "\033[0;34m")
+    lblue=$([ -z $TERM ] || printf "\033[0;94m")
     green=$([ -z $TERM ] || printf "\033[0;32m")
     yellow=$([ -z $TERM ] || printf "\033[0;33m")
-    reset=$([ -z $TERM ] || printf "\033[0m")
-    lblue=$([ -z $TERM ] || printf "\033[0;94m")
-    href=$([ -z $TERM ] || printf "\033[0;94m\e[1;")
+    reset=$([ -z $TERM ] || printf "\033[0m\e[0;")
+    href=$([ -z $TERM ] || printf "${lblue}\033[4m")
 }
 
 # Bootstrap the script
