@@ -24,7 +24,7 @@ install-dependencies() {
 
     # Check for installed packages
     if [ ! -z "${require:-}" ]; then
-        echo "Checking required dependencies: '${require:-}'"
+        echo "Checking required dependencies: ${require:-}"
         for pkg in ${require[@]}; do 
             found=$(apt show $pkg 2> /dev/null | grep "Version: " | cut -d ':' -f2- | tr -d ' ' || true)
             if [ -z "${found:-}" ]; then
@@ -33,23 +33,13 @@ install-dependencies() {
         done
     fi
 
-    # Install missing packages
+    # Install missing packages (if needed)
     if [ ! -z "${install:-}" ]; then
         echo "Installing packages: '${install:-}'"
         sudo apt install -y ${install:-}
+    else
+        echo "Dependencies are up to date."
     fi
-
-    
-    # TODO: Re-enable full list
-    return 0
-
-    # Install hugo (static site generator)
-    #sudo apt install -y hugo
-    CGO_ENABLED=1 \
-    go install -tags extended github.com/gohugoio/hugo@latest
-    
-    # Install taskfile as a golang package
-    go install github.com/go-task/task/v3/cmd/task@latest
 }
 
 install-service() {
