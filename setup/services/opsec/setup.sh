@@ -22,17 +22,23 @@ install-dependencies() {
     local require=${1:-()}
     local install=()
 
-    echo "Checking required dependencies: '${require:-}'"
-    for pkg in ${require[@]}; do 
-        found=$(apt show $pkg 2> /dev/null | grep "Version: " | cut -d ':' -f2- | tr -d ' ' || true)
-        if [ -z "${found:-}" ]; then
-            install+=($pkg)
-        fi
-    done
+    # Check for installed packages
+    if [ ! -z "${require:-}" ]; then
+        echo "Checking required dependencies: '${require:-}'"
+        for pkg in ${require[@]}; do 
+            found=$(apt show $pkg 2> /dev/null | grep "Version: " | cut -d ':' -f2- | tr -d ' ' || true)
+            if [ -z "${found:-}" ]; then
+                install+=($pkg)
+            fi
+        done
+    fi
+
+    # Install missing packages
     if [ ! -z "${install:-}" ]; then
         echo "Installing packages: '${install:-}'"
         sudo apt install -y ${install:-}
     fi
+
     
     # TODO: Re-enable full list
     return 0
