@@ -31,7 +31,7 @@ install-dependencies() {
 
     # Check for installed packages
     if [ ! -z "${require:-}" ]; then
-        echo "Checking required dependencies: ${require:-}"
+        echo "Checking dependencies: ${require:-}"
         for pkg in ${require[@]}; do 
             found=$(apt show $pkg 2> /dev/null | grep "Version: " | cut -d ':' -f2- | tr -d ' ' || true)
             if [ -z "${found:-}" ]; then
@@ -44,8 +44,6 @@ install-dependencies() {
     if [ ! -z "${install:-}" ]; then
         echo "Installing packages: '${install:-}'"
         sudo apt install -y ${install:-}
-    else
-        echo "Dependencies are up to date."
     fi
 }
 
@@ -67,6 +65,7 @@ install-service() {
     fi
 
     echo "Updating service: $SETUP_NAME ..."
+    mkdir -p "$dest"
     cp -rf "$SETUP_PATH" "$dest"
     
     # Generate manifest from template if provided
@@ -86,7 +85,7 @@ install-service() {
     # Create systemd service for startup and persistence
     # Note: switched to multi-user.target to make nexmon monitor mode work
     if [ -f "/etc/systemd/system/$SETUP_NAME.service" ]; then
-        echo "Starting service '$SETUP_NAME'..."
+        echo "Starting service: $SETUP_NAME..."
         sudo systemctl enable $SETUP_NAME.service
     fi        
 }
