@@ -19,8 +19,7 @@ install-dependencies() {
     # nmap:         Nmap ("Network Mapper") is an open source tool for network exploration and security auditing.
     # dirbuster:    DirBuster is a multi threaded java application designed to brute force directories and files names on web/application servers.
     # gobuster:     Discover directories and files that match in the wordlist (written on golang)
-    #local require=("nmap" "gobuster" "dirbuster")
-    local require=("nmap" "gobuster")
+    local require=("nmap" "gobuster" "dirbuster")
     local install=()
     for pkg in $require; do 
         found=$(apt show $pkg 2> /dev/null | grep "Version: " | cut -d ':' -f2- | tr -d ' ' || true)
@@ -31,7 +30,7 @@ install-dependencies() {
     done
     if [ ! -z "${install:-}" ]; then
         echo "Installing packages: '${install:-}'"
-        echo sudo apt install -y ${install:-}
+        sudo apt install -y ${install:-}
     fi
     
     # TODO: Re-enable full list
