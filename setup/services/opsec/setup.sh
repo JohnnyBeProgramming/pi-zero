@@ -29,8 +29,10 @@ install-dependencies() {
             install+=($pkg)
         fi
     done
-    echo "TODO: Install '${install:-}'"
-    echo sudo apt install -y ${install:-}
+    if [ ! -z "${install:-}" ]; then
+        echo "Installing packages: '${install:-}'"
+        echo sudo apt install -y ${install:-}
+    fi
     
     # TODO: Re-enable full list
     return 0
