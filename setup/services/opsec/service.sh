@@ -17,7 +17,7 @@ config() {
     if [ -f $THIS_DIR/service.env ]
     then
         echo "[ opsec ] Loading config: $THIS_DIR/service.env"
-        source $OPSEC_DIR/setup.env
+        source $THIS_DIR/service.env
     else
         echo "[ opsec ] Warning: No config found at $THIS_DIR/service.env"
     fi
