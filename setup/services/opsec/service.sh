@@ -32,7 +32,7 @@ config() {
     # Create bash script which could be altered from /home/admin/.profile
     # --------------------------------------------------------------
     echo "[ opsec ] Profile $OPSEC_FILE"
-	cat << EOF >> $OPSEC_FILE
+	cat << EOF > $OPSEC_FILE
 #!/bin/bash
 OPSEC_DIR=$OPSEC_DIR
 OPSEC_LANG=$OPSEC_LANG
@@ -87,17 +87,20 @@ wifi-check() {
 
 wifi-init() {
     echo "[ opsec ] Checking for WiFi capabilities..."
+
     if wifi-check; then
         echo "[ opsec ] Seems WiFi module is present!"
 
-        iw reg set $WIFI_REG || FAILED=true
-		if $FAILED; then
+        if [ ! -z "${WIFI_REG:-}" ]; then
+            iw reg set $WIFI_REG || FAILED=true
+        fi
+		if ${FAILED:-}; then
 			echo "[ opsec ] Failed to configure WiFi zone!"
 			return 1
 		fi
         
         # start WIFI client
-        if $WIFI_CLIENT; then
+        if ${WIFI_CLIENT:-}; then
             # try to connect to existing WiFi according to the config
             sleep 1 # pause to make new reg domain accessible in scan
             if wifi-client-start; then
@@ -111,7 +114,7 @@ wifi-init() {
         # start ACCESS POINT if needed
         # - if WiFi client mode is disabled and ACCESPOINT mode is enabled
         # - if WiFi client mode is enabled, but failed and ACCESPOINT mode is enabled
-        if $WIFI_ACCESSPOINT && ( ! $WIFI_CLIENT_CONNECTION_SUCCESS || ! $WIFI_CLIENT); then
+        if ${WIFI_ACCESSPOINT:-} && ( ! ${WIFI_CLIENT_CONNECTION_SUCCESS:-} || ! ${WIFI_CLIENT:-}); then
             wifi-access-point-start
             
             # check if acces point is up and trigger callback
@@ -290,9 +293,7 @@ EOF
 EOF
 	fi
 }
-
-wifi-access-point-dnsmasq-wifi-conf()
-{
+wifi-access-point-dnsmasq-wifi-conf() {
 	if $WIFI_ACCESSPOINT_DNS_FORWARD; then
 		DNS_PORT="53"
 	else
@@ -354,7 +355,7 @@ usb-init() {
 
 
 	# check if ethernet over USB should be used
-	if $USB_RNDIS || $USB_ECM; then
+	if ${USB_RNDIS:-} || ${USB_ECM:-}; then
 		USB_ETHERNET=true
 	fi
 
