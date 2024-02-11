@@ -66,8 +66,7 @@ install-service() {
 
     echo "Updating service: $SETUP_NAME ..."
     mkdir -p "$dest"
-    echo cp -rf "$SETUP_PATH/" "$dest/"
-    cp -rf "$SETUP_PATH/" "$dest/"
+    cp -rf "$SETUP_PATH/**" "$dest/"
     
     # Generate manifest from template if provided
     if [ -f "$dest/service.cfg.tpl" ]; then
