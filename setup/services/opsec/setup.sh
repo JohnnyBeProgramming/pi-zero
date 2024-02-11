@@ -61,12 +61,11 @@ install-service() {
     if [ -d "$dest" ]; then
         # Make a backup of current folder
         echo "Destination '$dest' exists, backing up..."
-        tar -zcvf $dest.tar.gz $dest
+        tar -zvf $dest.tar.gz -C $dest .
     fi
 
     echo "Updating service: $SETUP_NAME ..."
     mkdir -p "$dest"
-    echo rsync -a "$SETUP_PATH/" "$dest"
     rsync -a "$SETUP_PATH/" "$dest"
     
     # Generate manifest from template if provided
@@ -77,7 +76,6 @@ install-service() {
     # Install the service manifest in systemd
     if [ -f "$dest/service.cfg" ]; then
         echo "Injecting '$SETUP_NAME' startup script..."
-        echo cp -f "$dest/service.cfg" "/etc/systemd/system/$SETUP_NAME.service"
         sudo cp -f "$dest/service.cfg" "/etc/systemd/system/$SETUP_NAME.service"
     else
         echo "Warning: Not found '$dest/service.cfg', skipping..."
