@@ -94,7 +94,7 @@ wifi-init() {
         if [ ! -z "${WIFI_REG:-}" ]; then
             iw reg set $WIFI_REG || FAILED=true
         fi
-		if ${FAILED:-}; then
+		if ${FAILED:-false}; then
 			echo "[ opsec ] Failed to configure WiFi zone!"
 			return 1
 		fi
