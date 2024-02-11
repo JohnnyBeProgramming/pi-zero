@@ -59,7 +59,7 @@ check-internet() {
     TEST_URL="http://www.msftncsi.com/ncsi.txt"
     TEST_VAL="Microsoft NCSI"
     printf "${white}${bold}Testing internet connection & DNS resolution...${reset}\n"
-    printf "${dim}[${lblue}?${dim}] curl -s ${href}$TEST_URL${dim} == ${white}'$TEST_VAL'${dim}${reset}\n"
+    printf "${dim}[${blue}?${dim}] curl -s ${href}$TEST_URL${dim} == ${white}'$TEST_VAL'${dim}${reset}\n"
     TEST_RES=$(curl -s $TEST_URL)
     if [ "$TEST_VAL" == "$TEST_RES" ]; then
         echo "${dim}[${green}✔${dim}] Connection established from: ${href}$(hostname)${reset}"
@@ -115,9 +115,9 @@ install-packages() {
             # Check if we need to upgrade
             if [ ! -z "${found:-}" ] && [[ "$found" < "$tags" ]]
             then
-                prefix="${dim}[ ${lblue}⇊${dim} ]${reset}"
-                label="${bold}${lblue}${name}${reset}"
-                version="${lblue}($found -> $tags)${reset}"
+                prefix="${dim}[ ${blue}⇊${dim} ]${reset}"
+                label="${bold}${blue}${name}${reset}"
+                version="${blue}($found -> $tags)${reset}"
                 upgrade=true
             elif [ -z "${found:-}" ]; then
                 [ ! "$tags" == "*" ] || tags="latest"
@@ -198,9 +198,9 @@ install-services() {
                 status="${dim}(${green}running${dim})${reset}"
             elif [ ! -z "${old:-}" ] && [ -z "${new:-}" ]; then
                 # Service should be disabled
-                prefix="${dim}[ ${lblue}■${dim} ]${reset}"
-                label="${bold}${lblue}${name}${reset}"
-                status="${dim}(${lblue}stopping${dim})${reset}"
+                prefix="${dim}[ ${blue}■${dim} ]${reset}"
+                label="${bold}${blue}${name}${reset}"
+                status="${dim}(${blue}stopping${dim})${reset}"
                 action="disable"
             elif [ -z "${old:-}" ] && [ ! -z "${new:-}" ]; then
                 # Service needs to be started
@@ -230,7 +230,7 @@ install-custom-service() {
     # Check if there is a setup script
     if [ -f "$path/setup.sh" ] 
     then
-        printf "${dim}[ ${lblue}i${dim} ] ${white}${bold}$name (installing)${reset}${dim}\n"
+        printf "${dim}[ ${blue}i${dim} ] ${white}${bold}$name (installing)${reset}${dim}\n"
         . "$path/setup.sh" "$name" "$path"
         printf "${reset}"
     fi
@@ -249,7 +249,6 @@ colors() {
     white=$([ -z $TERM ] || printf "\033[0;97m")
     red=$([ -z $TERM ] || printf "\033[0;31m")
     blue=$([ -z $TERM ] || printf "\033[0;34m")
-    lblue=$([ -z $TERM ] || printf "\033[0;94m")
     green=$([ -z $TERM ] || printf "\033[0;32m")
     yellow=$([ -z $TERM ] || printf "\033[0;33m")
     reset=$([ -z $TERM ] || printf "\e[0m")
