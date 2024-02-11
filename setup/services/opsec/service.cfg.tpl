@@ -9,7 +9,7 @@ Before=sysinit.target
 #Type=oneshot
 Type=forking
 RemainAfterExit=yes
-ExecStart=/bin/bash $APP_HOME/boot/boot_simple
+ExecStart=/bin/bash $APP_HOME/.services/$SETUP_NAME/service.sh
 StandardOutput=journal+console
 StandardError=journal+console
 
