@@ -20,24 +20,18 @@ run() {
 	# Post installation advice
 	echo
 	echo "===================================================================================="
-	echo "If you came till here without errors, you shoud be good to go with your P4wnP1..."
-	echo "...if not - sorry, you're on your own, as this is work in progress"
+	echo "If you came till here without errors, you shoud be good to go with your device!"
+	echo "...if not, you're on your own. This comes with no guarantees."
 	echo 
-	echo "Attach P4wnP1 to a host and you should be able to SSH in with pi@172.16.0.1 (via RNDIS/CDC ECM)"
+	echo "If you use a USB OTG adapter to attach a keyboard, the Pi boots interactive mode."
+    echo
+	echo "Attach this Raspberry Pi to a host computer (via USB data port), to be able to:"
+    echo " - Share host internet and ethernet features (via RNDIS/CDC ECM)"
+    echo " - SSH into the device with: admin@172.16.0.1 (where 'admin' is your user)"
 	echo
-	echo "If you use a USB OTG adapter to attach a keyboard, P4wnP1 boots into interactive mode"
-	echo
-	echo "If you're using a Pi Zero W, a WiFi AP should be opened. You could use the AP to setup P4wnP1, too."
-	echo "          WiFi name:    P4wnP1"
-	echo "          Key:          MaMe82-P4wnP1"
-	echo "          SSH access:    pi@172.24.0.1 (password: raspberry)"
-	echo
-	echo "  or via Bluetooth NAP:    pi@172.26.0.1 (password: raspberry)"
-	echo
-	echo "Go to your installation directory. From there you can alter the settings in the file 'setup.env',"
-	echo "like payload and language selection"
-	echo 
-	echo "If you're using a Pi Zero W, give the HID backdoor a try ;-)"
+	echo "If you're using a Pi Zero W, a WiFi AP should also be opened."
+    echo " - You could use the AP to connect to the device"
+	echo " - Via Bluetooth NAP: admin@172.26.0.1"
 	echo
 	echo "You need to reboot the Pi now!"
 	echo "===================================================================================="
