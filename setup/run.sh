@@ -174,7 +174,14 @@ install-services() {
             local label="${dim}${name}${reset}"
             local status="${dim}(${enable})${reset}"
 
-            # Check if service is installed
+            # If this is a cust defined service, (re)create the service
+            local service_path="$THIS_DIR/services/$name"
+            if [ -d "$service_path" ]
+            then
+                install-custom-service "$name" "$service_path"
+            fi
+
+            # Check if service is installed and it's status
             local found=$(systemctl is-enabled $name 2> /dev/null)
             local old=$([ "${found:-}" == "enabled" ] && echo ON)
             local new=$([ "${enable:-}" == "true" ] && echo ON)            
@@ -202,7 +209,7 @@ install-services() {
                 status="${dim}(${green}starting${dim})${reset}"
                 action="enable"
             else
-                # Unknown status
+                # Unknown status or already disabled
                 prefix="${dim}[ ${dim}■${dim} ]${reset}"
                 status="${dim}(${found:-})${reset}"
             fi
@@ -214,6 +221,20 @@ install-services() {
             fi
         done
     fi
+}
+
+install-custom-service() {
+    local name=$1
+    local path=$2
+
+    # Check if there is a setup script
+    if [ -f "$path/setup.sh" ] 
+    then
+        echo "${dim}[ ${blue}i${dim} ] ${white}${bold}$name (installing)${reset}"
+        . "$path/setup.sh" "$name" "$path"
+    fi
+
+
 }
 
 fail() {
