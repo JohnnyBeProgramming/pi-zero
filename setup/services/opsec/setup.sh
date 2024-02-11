@@ -25,8 +25,11 @@ install-dependencies() {
         found=$(apt show $pkg 2> /dev/null | grep "Version: " | cut -d ':' -f2- | tr -d ' ' || true)
         echo "[ $pkg ] ... ($found)"
         if [ -z "${found:-}" ]; then
+            echo "[ $pkg ] <-- Install"
             install+=($pkg)
+            echo "[ $pkg ] <-- Added"
         fi
+        echo "[ $pkg ] <-- DONE"
     done
     if [ ! -z "${install:-}" ]; then
         echo "Installing packages: '${install:-}'"
