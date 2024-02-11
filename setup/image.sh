@@ -29,8 +29,8 @@ main() {
     
     # Configure volume
     copy-setup
-    #update-config
-    #update-commands
+    update-config
+    update-commands
     #update-first-run
     
     echo "Image updated."
