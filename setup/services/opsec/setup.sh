@@ -60,8 +60,8 @@ install-service() {
     # Copy the latest service to the app folder
     if [ -d "$dest" ]; then
         # Make a backup of current folder
-        echo "Destination exists, backing up: $dest"
-        cd "$dest" && tar -zcf $dest.tar.gz . && cd - 
+        echo "Backup existing: $dest"
+        cd "$dest" && tar -zcf $dest.tar.gz . && cd - > /dev/null
 
         # TODO: Trap and restore if fail...        
         # tar -xvf "$dest.tar.gz" --directory "$dest"
@@ -78,7 +78,6 @@ install-service() {
 
     # Install the service manifest in systemd
     if [ -f "$dest/service.cfg" ]; then
-        echo "Injecting '$SETUP_NAME' startup script..."
         sudo cp -f "$dest/service.cfg" "/etc/systemd/system/$SETUP_NAME.service"
     else
         echo "Warning: Not found '$dest/service.cfg', skipping..."
