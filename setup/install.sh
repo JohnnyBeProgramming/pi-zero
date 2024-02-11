@@ -89,7 +89,7 @@ update-os() {
 }
 
 install-packages() {
-    local config="$THIS_DIR/setup.ini"
+    local config="$THIS_DIR/packages.ini"
     if [ -f "$config" ]; then
         echo "${bold}Checking packages...${reset}"
         cat $config | sed -e 's/[[:space:]]*#.*// ; /^[[:space:]]*$/d' | while IFS= read -r line; do
