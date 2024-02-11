@@ -55,17 +55,17 @@ run() {
 	echo "===================================================================================="
 	echo "If you came till here without errors, you shoud be good to go with your device!"
 	echo "...if not, you're on your own. This comes with no guarantees."
-	echo 
+	echo ""
 	echo "If you use a USB OTG adapter to attach a keyboard, the Pi boots interactive mode."
-    echo
+    echo ""
 	echo "Attach this Raspberry Pi to a host computer (via USB data port), to be able to:"
     echo " - Share host internet and ethernet features (via RNDIS/CDC ECM)"
     echo " - SSH into the device with: admin@172.16.0.1 (where 'admin' is your user)"
-	echo
+	echo ""
 	echo "If you're using a Pi Zero W, a WiFi AP should also be opened."
     echo " - You could use the AP to connect to the device"
 	echo " - Via Bluetooth NAP: admin@172.26.0.1"
-	echo
+	echo ""
 	echo "You need to reboot the Pi now!"
 	echo "===================================================================================="
 }
@@ -93,7 +93,7 @@ wifi-init() {
 		fi
         
         # start WIFI client
-        if ${WIFI_CLIENT:-}; then
+        if [ "${WIFI_CLIENT:-}" == "true" ]; then
             # try to connect to existing WiFi according to the config
             sleep 1 # pause to make new reg domain accessible in scan
             if wifi-client-start; then
@@ -107,7 +107,7 @@ wifi-init() {
         # start ACCESS POINT if needed
         # - if WiFi client mode is disabled and ACCESPOINT mode is enabled
         # - if WiFi client mode is enabled, but failed and ACCESPOINT mode is enabled
-        if ${WIFI_ACCESSPOINT:-} && ( ! ${WIFI_CLIENT_CONNECTION_SUCCESS:-} || ! ${WIFI_CLIENT:-}); then
+        if [ "${WIFI_ACCESSPOINT:-}" == "true" ] && ( ! ${WIFI_CLIENT_CONNECTION_SUCCESS:-false} || ! ${WIFI_CLIENT:-false}); then
             wifi-access-point-start
             
             # check if acces point is up and trigger callback
