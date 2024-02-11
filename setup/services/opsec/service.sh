@@ -402,7 +402,7 @@ usb-ethernet-active-interface() {
 	# Note: Detection for RNDIS (usb0) is done first. In case it is active, link availability
 	#	for ECM (usb1) is checked anyway (in case both interfaces got link). This is done
 	#	to use ECM as prefered interface on MacOS and Linux if both, RNDIS and ECM, are supported.
-	if $USE_RNDIS && $USE_ECM; then
+	if ${USE_RNDIS:-} && ${USE_ECM:-}; then
 		# bring up both interfaces to check for physical link
 		ifconfig usb0 up
 		ifconfig usb1 up 
