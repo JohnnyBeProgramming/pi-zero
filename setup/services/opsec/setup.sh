@@ -77,7 +77,8 @@ install-service() {
     # Install the service manifest in systemd
     if [ -f "$dest/service.cfg" ]; then
         echo "Injecting '$SETUP_NAME' startup script..."
-        cat "$dest/service.cfg" | sudo tee /etc/systemd/system/$SETUP_NAME.service > /dev/null
+        echo cp -f "$dest/service.cfg" "/etc/systemd/system/$SETUP_NAME.service"
+        sudo cp -f "$dest/service.cfg" "/etc/systemd/system/$SETUP_NAME.service"
     else
         echo "Warning: Not found '$dest/service.cfg', skipping..."
         return 0
