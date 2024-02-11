@@ -253,6 +253,7 @@ colors() {
     yellow=$([ -z $TERM ] || printf "\033[0;33m")
     reset=$([ -z $TERM ] || printf "\033[0m")
     lblue=$([ -z $TERM ] || printf "\033[0;94m")
+    href=$([ -z $TERM ] || printf "\033[0;94m\e[1;")
 }
 
 # Bootstrap the script
