@@ -61,7 +61,7 @@ install-service() {
     if [ -d "$dest" ]; then
         # Make a backup of current folder
         echo "Destination exists, backing up: $dest"
-        cd "$dest" && tar -zcvf $dest.tar.gz . && cd - 
+        cd "$dest" && tar -zcf $dest.tar.gz . && cd - 
     fi
 
     echo "Updating service: $SETUP_NAME ..."
