@@ -4,40 +4,14 @@ set -euo pipefail # Stop running the script on first error...
 # --------------------------------------------------------------
 # This script starts a system service rasberry pi device
 # --------------------------------------------------------------
-OPSEC_USER=${OPSEC_USER:-"admin"}
-OPSEC_DIR=${OPSEC_DIR:-"/home/$OPSEC_USER/app"}
-OPSEC_LANG=${OPSEC_LANG:-$LANG}
-OPSEC_FILE=$OPSEC_DIR/.profile.sh
-
-run() {
-	echo "========================= OpSec tools starting up ======================"
-    config $@ # Load config settings
-	
-	# Initialise all the modules
-	usb-init
-    wifi-init
-
-	# Post installation advice
-	echo
-	echo "===================================================================================="
-	echo "If you came till here without errors, you shoud be good to go with your device!"
-	echo "...if not, you're on your own. This comes with no guarantees."
-	echo 
-	echo "If you use a USB OTG adapter to attach a keyboard, the Pi boots interactive mode."
-    echo
-	echo "Attach this Raspberry Pi to a host computer (via USB data port), to be able to:"
-    echo " - Share host internet and ethernet features (via RNDIS/CDC ECM)"
-    echo " - SSH into the device with: admin@172.16.0.1 (where 'admin' is your user)"
-	echo
-	echo "If you're using a Pi Zero W, a WiFi AP should also be opened."
-    echo " - You could use the AP to connect to the device"
-	echo " - Via Bluetooth NAP: admin@172.26.0.1"
-	echo
-	echo "You need to reboot the Pi now!"
-	echo "===================================================================================="
-}
+THIS_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 
 config() {
+    OPSEC_USER=${OPSEC_USER:-"admin"}
+    OPSEC_DIR=${OPSEC_DIR:-"/home/$OPSEC_USER/app"}
+    OPSEC_LANG=${OPSEC_LANG:-$LANG}
+    OPSEC_FILE=$OPSEC_DIR/.profile
+
     echo "[ opsec ] Loading config ..."
     
     # Load the basic config (if present)
@@ -73,6 +47,34 @@ EOF
 		declare -f onBootFinished > /dev/null && echo "Boot of application finished" # run only once
 	)&
 
+}
+
+run() {
+	echo "========================= OpSec tools starting up ======================"
+    config $@ # Load config settings
+	
+	# Initialise all the modules
+	usb-init
+    wifi-init
+
+	# Post installation advice
+	echo
+	echo "===================================================================================="
+	echo "If you came till here without errors, you shoud be good to go with your device!"
+	echo "...if not, you're on your own. This comes with no guarantees."
+	echo 
+	echo "If you use a USB OTG adapter to attach a keyboard, the Pi boots interactive mode."
+    echo
+	echo "Attach this Raspberry Pi to a host computer (via USB data port), to be able to:"
+    echo " - Share host internet and ethernet features (via RNDIS/CDC ECM)"
+    echo " - SSH into the device with: admin@172.16.0.1 (where 'admin' is your user)"
+	echo
+	echo "If you're using a Pi Zero W, a WiFi AP should also be opened."
+    echo " - You could use the AP to connect to the device"
+	echo " - Via Bluetooth NAP: admin@172.26.0.1"
+	echo
+	echo "You need to reboot the Pi now!"
+	echo "===================================================================================="
 }
 
 wifi-check() {
