@@ -73,6 +73,7 @@ install-service() {
     
     # Generate manifest from template if provided
     if [ -f "$dest/service.cfg.tpl" ]; then
+        export APP_HOME=$APP_HOME
         cat "$dest/service.cfg.tpl" | envsubst > "$dest/service.cfg"
     fi
 
