@@ -53,7 +53,7 @@ install-service() {
 
     # Temporarily stop the service while we install
     if [ "${state:-}" == "enabled" ]; then
-        echo "Stopping service '$SETUP_NAME'..."
+        echo "Stopping service: $SETUP_NAME ..."
         sudo systemctl disable $SETUP_NAME.service
     fi
 
@@ -87,7 +87,7 @@ install-service() {
     # Create systemd service for startup and persistence
     # Note: switched to multi-user.target to make nexmon monitor mode work
     if [ -f "/etc/systemd/system/$SETUP_NAME.service" ]; then
-        echo "Starting service: $SETUP_NAME..."
+        echo "Starting service: $SETUP_NAME ..."
         sudo systemctl enable $SETUP_NAME.service
     fi        
 }
