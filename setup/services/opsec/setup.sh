@@ -20,10 +20,10 @@ install-dependencies() {
     # dirbuster:    DirBuster is a multi threaded java application designed to brute force directories and files names on web/application servers.
     # gobuster:     Discover directories and files that match in the wordlist (written on golang)
     #local require=("nmap" "gobuster" "dirbuster")
-    local require=("nmap")
+    local require=("nmap" "gobuster")
     local install=()
     for pkg in $require; do 
-        found=$(apt show $name 2> /dev/null | grep "Version: " | cut -d ':' -f2- | tr -d ' ' || true)
+        found=$(apt show $pkg 2> /dev/null | grep "Version: " | cut -d ':' -f2- | tr -d ' ' || true)
         echo "[ $pkg ] ... ($found)"
         if [ -z "${found:-}" ]; then
             install+=($pkg)
