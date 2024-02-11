@@ -9,7 +9,7 @@ setup() {
     SETUP_PATH=${2:-$THIS_DIR}
 
     # Install any dependencies used by this service (if not already installed)
-    install-dependencies ("nmap" "gobuster")
+    install-dependencies
 
     # Recreate the service manifest and update to latest
     install-service
@@ -19,7 +19,7 @@ install-dependencies() {
     # nmap:         Nmap ("Network Mapper") is an open source tool for network exploration and security auditing.
     # dirbuster:    DirBuster is a multi threaded java application designed to brute force directories and files names on web/application servers.
     # gobuster:     Discover directories and files that match in the wordlist (written on golang)
-    local require=${1:-()}
+    local require=("nmap" "gobuster")
     local install=()
 
     # Check for installed packages
