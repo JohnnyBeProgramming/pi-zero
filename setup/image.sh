@@ -15,7 +15,7 @@ config() {
     BOOT_DIR=${1:-}
     
     if [ -z "${1:-}" ]; then
-        echo "Please specify the volume volem to update."
+        echo "Please specify the volume to update."
         echo "eg: $0 /Volumes/bootfs"
         echo 
         echo Hint: diskutil list external
@@ -29,9 +29,8 @@ main() {
     
     # Configure volume
     copy-setup
-    update-config
-    update-commands
-    #update-first-run
+    #update-config
+    #update-commands
     
     echo "Image updated."
 }
@@ -77,22 +76,6 @@ update-commands() {
     # Add additional modules to command line at startup
     echo " + $file - modules-load=dwc2,g_ether"
     sed -i '' 's|rootwait|rootwait modules-load=dwc2,g_ether|' $file
-}
-
-update-first-run() {
-    file="$BOOT_DIR/firstrun.sh"
-
-    [ -f "$file" ] || return 0
-    [ -f "$file.bak" ] || cat $file > $file.bak
-    [ -f "$BOOT_DIR/setup/install.sh" ] || return 0
-
-    if cat $file | grep "/boot/setup/install.sh" > /dev/null; then
-        # Already up to date
-        return 0
-    fi
-
-    echo " + $file - attach setup script."
-    sed -i '' "s|rm -f /boot/firstrun.sh|/boot/setup/install.sh \nrm -f /boot/firstrun.sh|" $file    
 }
 
 # Bootstrap the script
