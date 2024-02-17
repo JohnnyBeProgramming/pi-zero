@@ -193,11 +193,8 @@ image-boot-config() {
         return 0
     fi
     
-    echo " + Config: dtoverlay=dwc2"
-    if cat $file | grep "dtoverlay=" > /dev/null
-    then
-        sed -i '' 's|dtoverlay=.*|dtoverlay=dwc2|' $file
-    else
+    if ! cat $file | grep "dtoverlay=dwc2" > /dev/null; then
+        echo " + Config: dtoverlay=dwc2"
         echo "dtoverlay=dwc2" >> $file
     fi
 }

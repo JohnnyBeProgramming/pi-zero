@@ -6,6 +6,7 @@ set -euo pipefail # Stop running the script on first error...
 # Install golang
 #sudo apt-get install golang
 
+# Install latest version of go from the sources...
 setup() {
     local tag="1.21.4"
     local arch=$(uname -m)

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # --------------------------------------------------------------
 # Common services setup functions and utils. Include in scripts:
-#  - eg: source "$THIS_DIR/../common.sh"
+#  - eg: source "$THIS_DIR/../utils.sh"
 # --------------------------------------------------------------
 set -euo pipefail # Stop running the script on first error...
 # --------------------------------------------------------------

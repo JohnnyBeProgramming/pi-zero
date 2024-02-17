@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 
-# Install Python v3
+# Install Python v3 (default)
 sudo apt-get -y install python3-pip python3-dev
+exit 0
 
-upgrade-python-latest() {
+# Install latest version of python
+setup() {
     local tag="3.11.5"
     local bin="python3.11"
 
@@ -26,4 +28,4 @@ upgrade-python-latest() {
 }
 
 # Try and install the specified version
-upgrade-python-latest ""
+setup $@

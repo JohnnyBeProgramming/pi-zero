@@ -8,7 +8,7 @@ setup() {
     config $@
     
     # Load common setup functions
-    source "$THIS_DIR/../common.sh"
+    source "$THIS_DIR/../utils.sh"
     
     # Install any dependencies used by this service (if not already installed)
     install-dependencies git
