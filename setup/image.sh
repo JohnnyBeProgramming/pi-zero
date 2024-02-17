@@ -135,7 +135,6 @@ image-restore() {
     [ -f "${filename:-}" ] || fatal "File '$filename' does not exists."
 
     local volume=${2:-$(select-disk)}
-    # Make sure file and target volume exists
     [ ! -z "${volume:-}" ] || fatal "Please specify the volume to restore to."
     
     # Make a clone of the specified drive
@@ -178,8 +177,9 @@ image-bootloader() {
     echo "Updating bootloader: $volume"
     image-boot-config "$volume"
     image-boot-commands "$volume"
+    touch "$volume/ssh"
+    echo "Done."
 }
-
 
 image-boot-config() {
     local volume=$1
@@ -193,9 +193,9 @@ image-boot-config() {
         return 0
     fi
     
+    echo " + Config: dtoverlay=dwc2"
     if cat $file | grep "dtoverlay=" > /dev/null
     then
-        echo " + $file: Configures dtoverlay=dwc2"
         sed -i '' 's|dtoverlay=.*|dtoverlay=dwc2|' $file
     else
         echo "dtoverlay=dwc2" >> $file
@@ -204,7 +204,7 @@ image-boot-config() {
 
 image-boot-commands() {
     local volume=$1
-    local file="$BOOT_DIR/cmdline.txt"
+    local file="$volume/cmdline.txt"
     
     [ -f "$file" ] || return 0
     [ -f "$file.bak" ] || cat $file > $file.bak
@@ -215,7 +215,7 @@ image-boot-commands() {
     fi
     
     # Add additional modules to command line at startup
-    echo " + $file: Adding modules-load=dwc2,g_ether"
+    echo " + Loads: modules-load=dwc2,g_ether"
     sed -i '' 's|rootwait|rootwait modules-load=dwc2,g_ether|' $file
 }
 
