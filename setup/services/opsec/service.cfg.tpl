@@ -1,5 +1,5 @@
 [Unit]
-Description=OpSec Startup Service
+Description=$SETUP_NAME - Startup Service
 #After=systemd-modules-load.service
 After=local-fs.target
 DefaultDependencies=no
@@ -9,7 +9,7 @@ Before=sysinit.target
 #Type=oneshot
 Type=forking
 RemainAfterExit=yes
-ExecStart=/bin/bash $APP_HOME/.services/$SETUP_NAME/service.sh
+ExecStart=/bin/bash $APP_HOME/service.sh
 StandardOutput=journal+console
 StandardError=journal+console
 

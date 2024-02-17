@@ -18,15 +18,20 @@ config() {
         echo "Please specify the ssh user and hostname."
         echo "eg: $0 user@hostname.local"
         exit 1
-    fi
+    fi    
+
+    dim=$([ -z $TERM ] || printf "\033[0;90m")
+    reset=$([ -z $TERM ] || printf "\e[0m")
 }
 
 main() {
-    # Setup basic config and check for an active internet connection
     config $@
     
     # Configure volume
-    echo "TODO: Copy setup files to $TARGET_HOST"    
+    echo "Copying setup files to $TARGET_HOST"
+    printf "${dim:-}"
+    tar zcf - ./setup | ssh $TARGET_HOST "tar zxvf - ./setup && ./setup/install.sh"
+    printf "${reset:-}"
 }
 
 # Bootstrap the script

@@ -13,10 +13,8 @@ set -euo pipefail # Stop running the script on first error...
 
 config() {
     # Set the core installation config settings
-    APP_NAME="opsec"                # Name of the application that will be installed
     APP_BOOT="/boot"                # Default location to look for installation files
-    APP_USER=${USER:-$APP_NAME}     # The user associated with the system process
-    APP_HOME="${HOME}/app"          # Default installation target folder
+    APP_USER=${APP_USER:-$USER}     # The user associated with the system process
     APP_REPO="https://github.com/JohnnyBeProgramming/pi-zero.git"
     
     if [ -f "${BASH_SOURCE:-}" ]; then
@@ -24,7 +22,7 @@ config() {
         THIS_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
         THIS_FILE=$(basename "${BASH_SOURCE[0]}")
     else
-        THIS_DIR="$APP_HOME/setup"
+        THIS_DIR="$HOME/setup"
         THIS_FILE="run.sh"
     fi
 }
@@ -35,10 +33,8 @@ main() {
     colors
     check-deps
     
-    # Update operating system packages to their latest versions
+    # Install and upgrade specified packages and services
     #update-os
-    
-    # Setup defaults
     install-packages
     install-services
 }
@@ -46,33 +42,12 @@ main() {
 check-deps() {
     # Do some pre-checks to ensure we have internet and a valid architecture
     check-arch || fail "Architecture $OSTYPE ($(uname -m)) not supported"
-    check-internet || fail "No internet connection could be established."
-    check-setup-media || fail "Setup failed to find installation media in:\n - $THIS_DIR"
+    check-setup-media || fail "Setup failed to find installation media in:\n - $THIS_DIR"    
 }
 
 check-arch() {
     # Make sure we are running debian
     [ -f "/etc/debian_version" ] || return 1
-}
-
-check-internet() {
-    TEST_URL="http://www.msftncsi.com/ncsi.txt"
-    TEST_VAL="Microsoft NCSI"
-    printf "${white}${bold}Testing internet connection & DNS resolution...${reset}\n"
-    printf "${dim}[ ${blue}?${dim} ] curl -s ${href}$TEST_URL${dim} == ${white}'$TEST_VAL'${dim}${reset}\n"
-    TEST_RES=$(curl -s $TEST_URL)
-    if [ "$TEST_VAL" == "$TEST_RES" ]; then
-        echo "${dim}[ ${green}✔${dim} ] Connection established from: ${href}$(hostname)${reset}"
-        return 0
-    else
-        printf "${bold}${red}[ ! ] Error: No Internet connection, or name resolution doesn't work!${reset}\n"
-        echo "----------------------------------------"
-        echo "TEST_URL: $TEST_URL"
-        echo "TEST_VAL: $TEST_VAL (expected)"
-        echo "TEST_RES: $TEST_RES"
-        echo "----------------------------------------"
-        return 1
-    fi    
 }
 
 check-setup-media() {
@@ -91,7 +66,7 @@ update-os() {
 install-packages() {
     local config="$THIS_DIR/packages.ini"
     if [ -f "$config" ]; then
-        echo "${bold}Checking packages...${reset}"
+        echo "${reset}${bold}Checking packages...${reset}"
         cat $config | sed -e 's/[[:space:]]*#.*// ; /^[[:space:]]*$/d' | while IFS= read -r line; do
             local name=$(echo "$line" | cut -d '=' -f1)
             local tags=$(echo "$line" | cut -d '=' -f2)
@@ -115,15 +90,20 @@ install-packages() {
             # Check if we need to upgrade
             if [ ! -z "${found:-}" ] && [[ "$found" < "$tags" ]]
             then
+                # Upgrade current version
                 prefix="${dim}[ ${blue}⇊${dim} ]${reset}"
                 label="${bold}${blue}${name}${reset}"
                 version="${blue}($found -> $tags)${reset}"
                 upgrade=true
             elif [ -z "${found:-}" ]; then
+                # Installs missing package
                 [ ! "$tags" == "*" ] || tags="latest"
                 label="${bold}${green}${name}${reset}"
                 version="${dim}(${green}$tags${dim})${reset}"
                 upgrade=true
+            else
+                # Package found locally
+                prefix="${dim}[ ${green}✔${dim} ]${reset}"
             fi
             
             # Print package and its current state
@@ -230,7 +210,7 @@ install-custom-service() {
     # Check if there is a setup script
     if [ -f "$path/setup.sh" ] 
     then
-        printf "${dim}[ ${blue}i${dim} ] ${white}${bold}$name (installing)${reset}${dim}\n"
+        printf "${dim}"
         . "$path/setup.sh" "$name" "$path"
         printf "${reset}"
     fi
