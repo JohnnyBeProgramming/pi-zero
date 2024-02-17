@@ -1,4 +1,6 @@
-ssh-keygen -t ed25519 -C "your@email.com"
+read -p 'Git user email: ' email
+
+ssh-keygen -t ed25519 -C $email
 
 eval "$(ssh-agent -s)"
 
@@ -11,7 +13,7 @@ Host github.com
 EOF
 fi
 
-echo "TODO: Add this ssh key to your GH account"
+echo "TODO: Add this ssh key to your GitHub account"
 echo "----------------------------------------------"
 cat ~/.ssh/id_ed25519.pub
 echo "----------------------------------------------"
