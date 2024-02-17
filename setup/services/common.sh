@@ -64,7 +64,7 @@ up-to-date() {
     local dest=$1
     local path=$SETUP_PATH
     local changes=$(rsync -aEim --dry-run "$path/" "$dest" | wc -l)
-
+    
     # Check if there are any changes that needs to be copied
     if [[ "${changes:-0}" -gt "1" ]]; then
         return 1

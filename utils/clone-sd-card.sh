@@ -11,7 +11,7 @@ then
 fi
 
 # Make a clone of the specified drive
-if which qemu-img > /dev/null
+if which dd > /dev/null
 then
     echo "Creating a new disk image: $2"
     dd if=$1 of=$2
