@@ -7,9 +7,9 @@ set -euo pipefail # Stop running the script on first error...
 THIS_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 
 config() {
-    OPSEC_USER=${OPSEC_USER:-$USER}
+    OPSEC_USER=${OPSEC_USER:-$(whoami)}
     OPSEC_LANG=${OPSEC_LANG:-$LANG}
-    OPSEC_DIR=${OPSEC_DIR:-"$HOME/.hotspot"}
+    OPSEC_DIR=${OPSEC_DIR:-$THIS_DIR}
     OPSEC_FILE=$OPSEC_DIR/.profile
 
     
@@ -46,26 +46,26 @@ run() {
 	echo "========================= Hotspot starting up ======================"
     config $@ # Load config settings
 	
-	# Initialise all the modules
-	#usb-init
-    #wifi-init
+	# Initialise the wifi and/or hotspot
+    wifi-init
 
 	# Post installation advice
 	echo
 	echo "===================================================================================="
 	echo "If you came till here without errors, you shoud be good to go with your device!"
-	echo "...if not, you're on your own. This comes with no guarantees."
 	echo " "
 	echo "If you use a USB OTG adapter to attach a keyboard, the Pi boots interactive mode."
     echo " "
 	echo "Attach this Raspberry Pi to a host computer (via USB data port), to be able to:"
     echo " - Share host internet and ethernet features (via RNDIS/CDC ECM)"
-    echo " - SSH into the device with: admin@172.16.0.1 (where 'admin' is your user)"
+    echo " - SSH into the device with: $(whoami)@$(hostname) (where '$(whoami)' is your user)"
 	echo " "
-	echo "If you're using a Pi Zero W, a WiFi AP should also be opened."
+	if ${WIFI_ACCESSPOINT:-false}; then
+	echo "If you're using a Pi Zero W, a WiFi AP called '' should also be opened."
     echo " - You could use the AP to connect to the device"
-	echo " - Via Bluetooth NAP: admin@172.26.0.1"
+	echo " - Via Bluetooth NAP: $(whoami)@$(hostname)"
 	echo " "
+	fi
 	echo "You need to reboot the Pi now!"
 	echo "===================================================================================="
 }
@@ -92,11 +92,13 @@ wifi-init() {
 			return 1
 		fi
         
-        # start WIFI client
+        # start WIFI client if needed
         if [ "${WIFI_CLIENT:-}" == "true" ]; then
+			echo "[ hotspot ] Connecting to existing wifi SSID: ${WIFI_CLIENT_SSID:-}"
             # try to connect to existing WiFi according to the config
             sleep 1 # pause to make new reg domain accessible in scan
             if wifi-client-start; then
+				echo "[ hotspot ] Connected to: ${WIFI_CLIENT_SSID:-}"
                 WIFI_CLIENT_CONNECTION_SUCCESS=true
             else
                 echo "[ hotspot ] Join present WiFi didn't succeed, failing over to access point mode"
@@ -108,6 +110,7 @@ wifi-init() {
         # - if WiFi client mode is disabled and ACCESPOINT mode is enabled
         # - if WiFi client mode is enabled, but failed and ACCESPOINT mode is enabled
         if [ "${WIFI_ACCESSPOINT:-}" == "true" ] && ( ! ${WIFI_CLIENT_CONNECTION_SUCCESS:-false} || ! ${WIFI_CLIENT:-false}); then
+			echo "[ hotspot ] Starting wifi access point: ${WIFI_ACCESSPOINT_NAME:-}"
             wifi-access-point-start
             
             # check if acces point is up and trigger callback

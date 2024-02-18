@@ -11,7 +11,7 @@ setup() {
     source "$THIS_DIR/../utils.sh"
     
     # Install any dependencies used by this service (if not already installed)
-    # install-dependencies nmap gobuster 
+    install-dependencies dnsmasq hostapd bridge-utils ethtool
     
     # Recreate the service manifest and update to latest
     install-service $SETUP_NAME "$HOME/.hotspot"

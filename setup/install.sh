@@ -145,8 +145,9 @@ upgrade-package() {
 
 install-services() {
     local config="$THIS_DIR/services.ini"
+    local services="$THIS_DIR/services"
     if [ -f "$config" ]; then
-        echo "${bold}Checking services...${reset}"
+        echo "${reset}${bold}Checking services...${reset}"
         cat $config | sed -e 's/[[:space:]]*#.*// ; /^[[:space:]]*$/d' | while IFS= read -r line; do
             local name=$(echo "$line" | cut -d '=' -f1)
             local enable=$(echo "$line" | cut -d '=' -f2)
@@ -155,7 +156,7 @@ install-services() {
             local status="${dim}(${enable})${reset}"
 
             # If this is a cust defined service, (re)create the service
-            local service_path="$THIS_DIR/services/$name"
+            local service_path="$services/$name"
             if [ -d "$service_path" ]
             then
                 install-custom-service "$name" "$service_path"
