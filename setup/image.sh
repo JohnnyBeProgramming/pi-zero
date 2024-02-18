@@ -45,6 +45,18 @@ main() {
             # List external volumes that are attacked
             diskutil list external | grep "(external, " | cut -d ' ' -f1
         ;;
+        https://**)
+            # Pull image directly from an URL, and install add-ons on top of it
+            image-from-url $ACTION
+        ;;
+        latest)
+            # Base off latest known release version
+            image-from-url "https://downloads.raspberrypi.com/raspios_armhf/images/raspios_armhf-2023-12-06/2023-12-05-raspios-bookworm-armhf.img.xz"
+        ;;
+        stable)
+            # Base off stable version
+            image-from-url "https://downloads.raspberrypi.org/raspbian_lite/images/raspbian_lite-2017-04-10/2017-04-10-raspbian-jessie-lite.zip"
+        ;;
         setup)
             # Copy setup folder to installation media
             image-setup $@
@@ -66,39 +78,60 @@ main() {
             image-bootloader $@
         ;;
         *)
-            printf "Action '${ACTION:-}' is unknown or not specified.\n\n"
-            help && exit 1
+            if [ -f "images/${ACTION:-}.img" ]; then
+                image-from-base "images/${ACTION:-}.img"
+            else
+                printf "Action '${ACTION:-}' is unknown or not specified.\n\n"
+                help && exit 1
+            fi
         ;;
     esac
 }
 
-select-disk() {
-    local value=""
-    n=""
-    while true; do
-        list=()
-        i=0
-        printf "External Storage devices:\n\n" 1>&2
-        while IFS= read -r line; do
-            export i=$(($i+1))
-            list+=("$line")
-            echo "$i) $line" 1>&2
-        done <<< $(diskutil list external | grep "(external, " | cut -d ' ' -f1 )
-        [ "$i" != "0" ] || throw "No storage devices detected."
+image-from-url() {
+    local url=$1
+    local file="images/$(basename $1)"
+    local name=$(basename ${file%.*})
+    local img="$name.img"
+    local src="$(basename $(dirname $1))/$name.img"
 
-        printf "\n" 1>&2
-        read -p 'Select target storage: ' n
+    if [ ! -f $file ]; then
+        echo "Downloading [ $name ]: $url"
+        curl $url -o $file
+        tar -zxvf $file -C ./images "$img"
+    fi
 
-        # If $n is an integer between one and $count...
-        if [[ "$n" -eq "$n" ]] && [[ "$n" -gt 0 ]] && [[ "$n" -le "$i" ]]; then
-            echo "${list[$(($n-1))]}"
-            break
-        fi
-    done
+    image-from-base ./images/$img
 }
 
+image-from-base() {
+    local file=$1
+    local volume=${2:-$(select-disk)}
+    local path=$(select-volume $volume)
+    
+    # Rebase the setup from abase image
+    image-restore $file
+    image-setup $path
+    #image-bootloader $path
+}
+
+up-to-date() {
+    local dest=$1
+    local path=$SETUP_PATH
+    local changes=$(rsync -aEim --dry-run "$path/" "$dest" | wc -l)
+    
+    # Check if there are any changes that needs to be copied
+    if [[ "${changes:-0}" -gt "1" ]]; then
+        return 1
+    fi
+    
+    # Changes detected
+    return 0
+}
 image-setup() {
     local volume=${1:-}
+    local src="$THIS_DIR/"
+    local dest="$volume/setup"
     
     [ ! -z "${volume:-}" ] || fatal "Please specify the volume to update to."
     [ ! -d "$volume/setup" ] || rm -rf "$volume/setup"
@@ -215,6 +248,36 @@ image-boot-commands() {
     echo " + Loads: modules-load=dwc2,g_ether"
     sed -i '' 's|rootwait|rootwait modules-load=dwc2,g_ether|' $file
 }
+
+select-disk() {
+    local value=""
+    n=""
+    while true; do
+        list=()
+        i=0
+        printf "External Storage devices:\n\n" 1>&2
+        while IFS= read -r line; do
+            export i=$(($i+1))
+            list+=("$line")
+            echo "$i) $line" 1>&2
+        done <<< $(diskutil list external | grep "(external, " | cut -d ' ' -f1 )
+        [ "$i" != "0" ] || throw "No storage devices detected."
+
+        printf "\n" 1>&2
+        read -p 'Select target storage: ' n
+
+        # If $n is an integer between one and $count...
+        if [[ "$n" -eq "$n" ]] && [[ "$n" -gt 0 ]] && [[ "$n" -le "$i" ]]; then
+            echo "${list[$(($n-1))]}"
+            break
+        fi
+    done
+}
+
+select-volume() {
+    mount | grep $1 | cut -d ' ' -f3
+}
+
 
 fatal() {
     red=$([ -z $TERM ] || printf "\033[0;31m")

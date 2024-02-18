@@ -1,68 +1,31 @@
 #!/bin/sh
 # --------------------------------------------------------------
+set -euo pipefail # Stop running the script on first error...
+# --------------------------------------------------------------
 # This script starts a system service rasberry pi device
 # --------------------------------------------------------------
-OPSEC_USER=${OPSEC_USER:-$USER}
-OPSEC_DIR=${OPSEC_DIR:-"$HOME/app"}
-OPSEC_LANG=${OPSEC_LANG:-$LANG}
-OPSEC_FILE=$OPSEC_DIR/.profile.sh
-
-run() {
-	echo "========================= OpSec tools starting up ======================"
-    config $@ # Load config settings
-	
-	# Initialise all the modules
-	usb-init
-    wifi-init
-
-	# Post installation advice
-	echo
-	echo "===================================================================================="
-	echo "If you came till here without errors, you shoud be good to go with your P4wnP1..."
-	echo "...if not - sorry, you're on your own, as this is work in progress"
-	echo 
-	echo "Attach P4wnP1 to a host and you should be able to SSH in with pi@172.16.0.1 (via RNDIS/CDC ECM)"
-	echo
-	echo "If you use a USB OTG adapter to attach a keyboard, P4wnP1 boots into interactive mode"
-	echo
-	echo "If you're using a Pi Zero W, a WiFi AP should be opened. You could use the AP to setup P4wnP1, too."
-	echo "          WiFi name:    P4wnP1"
-	echo "          Key:          MaMe82-P4wnP1"
-	echo "          SSH access:    pi@172.24.0.1 (password: raspberry)"
-	echo
-	echo "  or via Bluetooth NAP:    pi@172.26.0.1 (password: raspberry)"
-	echo
-	echo "Go to your installation directory. From there you can alter the settings in the file 'setup.env',"
-	echo "like payload and language selection"
-	echo 
-	echo "If you're using a Pi Zero W, give the HID backdoor a try ;-)"
-	echo
-	echo "You need to reboot the Pi now!"
-	echo "===================================================================================="
-}
+THIS_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 
 config() {
-    echo "[ opsec ] Loading config ..."
+    OPSEC_USER=${OPSEC_USER:-$USER}
+    OPSEC_LANG=${OPSEC_LANG:-$LANG}
+    OPSEC_DIR=${OPSEC_DIR:-"$HOME/.hotspot"}
+    OPSEC_FILE=$OPSEC_DIR/.profile
+
     
     # Load the basic config (if present)
-    if [ -f $OPSEC_DIR/setup.env ]
+    if [ -f $THIS_DIR/service.env ]
     then
-        echo " + $OPSEC_DIR/setup.env"
-        source $OPSEC_DIR/setup.env
-    fi
-    
-    # include payload (overrides variables set by setup.env if needed)
-    if [ ! -z "$PAYLOAD" ] && [ -f $OPSEC_DIR/payloads/$PAYLOAD ]
-    then
-        # PAYLOAD itself is define in setup.env
-        echo " + $OPSEC_DIR/payloads/$PAYLOAD"
-        source $OPSEC_DIR/payloads/$PAYLOAD
+        echo "[ hotspot ] Loading config: $THIS_DIR/service.env"
+        source $THIS_DIR/service.env
+    else
+        echo "[ hotspot ] Warning: No config found at $THIS_DIR/service.env"
     fi
     
     # Create bash script which could be altered from /home/admin/.profile
     # --------------------------------------------------------------
-    echo "[ opsec ] Profile $OPSEC_FILE"
-	cat << EOF >> $OPSEC_FILE
+    echo "[ hotspot ] Profile $OPSEC_FILE"
+	cat << EOF > $OPSEC_FILE
 #!/bin/bash
 OPSEC_DIR=$OPSEC_DIR
 OPSEC_LANG=$OPSEC_LANG
@@ -79,6 +42,34 @@ EOF
 
 }
 
+run() {
+	echo "========================= Hotspot starting up ======================"
+    config $@ # Load config settings
+	
+	# Initialise all the modules
+	#usb-init
+    #wifi-init
+
+	# Post installation advice
+	echo
+	echo "===================================================================================="
+	echo "If you came till here without errors, you shoud be good to go with your device!"
+	echo "...if not, you're on your own. This comes with no guarantees."
+	echo " "
+	echo "If you use a USB OTG adapter to attach a keyboard, the Pi boots interactive mode."
+    echo " "
+	echo "Attach this Raspberry Pi to a host computer (via USB data port), to be able to:"
+    echo " - Share host internet and ethernet features (via RNDIS/CDC ECM)"
+    echo " - SSH into the device with: admin@172.16.0.1 (where 'admin' is your user)"
+	echo " "
+	echo "If you're using a Pi Zero W, a WiFi AP should also be opened."
+    echo " - You could use the AP to connect to the device"
+	echo " - Via Bluetooth NAP: admin@172.26.0.1"
+	echo " "
+	echo "You need to reboot the Pi now!"
+	echo "===================================================================================="
+}
+
 wifi-check() {
     if ! iwconfig 2>&1 | grep -q -E ".*wlan0.*"; then
         echo "...[Error] no wlan0 interface found"
@@ -88,24 +79,27 @@ wifi-check() {
 }
 
 wifi-init() {
-    echo "[ opsec ] Checking for WiFi capabilities..."
-    if wifi-check; then
-        echo "[ opsec ] Seems WiFi module is present!"
+    echo "[ hotspot ] Checking for WiFi capabilities..."
 
-        iw reg set $WIFI_REG || FAILED=true
-		if $FAILED; then
-			echo "[ opsec ] Failed to configure WiFi zone!"
+    if wifi-check; then
+        echo "[ hotspot ] Seems WiFi module is present!"
+
+        if [ ! -z "${WIFI_REG:-}" ]; then
+            iw reg set $WIFI_REG || FAILED=true
+        fi
+		if ${FAILED:-false}; then
+			echo "[ hotspot ] Failed to configure WiFi zone!"
 			return 1
 		fi
         
         # start WIFI client
-        if $WIFI_CLIENT; then
+        if [ "${WIFI_CLIENT:-}" == "true" ]; then
             # try to connect to existing WiFi according to the config
             sleep 1 # pause to make new reg domain accessible in scan
             if wifi-client-start; then
                 WIFI_CLIENT_CONNECTION_SUCCESS=true
             else
-                echo "[ opsec ] Join present WiFi didn't succeed, failing over to access point mode"
+                echo "[ hotspot ] Join present WiFi didn't succeed, failing over to access point mode"
                 WIFI_CLIENT_CONNECTION_SUCCESS=false
             fi
         fi
@@ -113,7 +107,7 @@ wifi-init() {
         # start ACCESS POINT if needed
         # - if WiFi client mode is disabled and ACCESPOINT mode is enabled
         # - if WiFi client mode is enabled, but failed and ACCESPOINT mode is enabled
-        if $WIFI_ACCESSPOINT && ( ! $WIFI_CLIENT_CONNECTION_SUCCESS || ! $WIFI_CLIENT); then
+        if [ "${WIFI_ACCESSPOINT:-}" == "true" ] && ( ! ${WIFI_CLIENT_CONNECTION_SUCCESS:-false} || ! ${WIFI_CLIENT:-false}); then
             wifi-access-point-start
             
             # check if acces point is up and trigger callback
@@ -292,9 +286,7 @@ EOF
 EOF
 	fi
 }
-
-wifi-access-point-dnsmasq-wifi-conf()
-{
+wifi-access-point-dnsmasq-wifi-conf() {
 	if $WIFI_ACCESSPOINT_DNS_FORWARD; then
 		DNS_PORT="53"
 	else
@@ -348,15 +340,15 @@ EOF
 usb-init() {
 	# early out if OpSec is used in OTG mode
 	if [ -f /sys/kernel/debug/20980000.usb/state ] && grep -q "DCFG=0x00000000" /sys/kernel/debug/20980000.usb/state; then
-		echo "[ opsec ] Detected to run in Host (interactive) mode, we abort device setup now!"
+		echo "[ hotspot ] Detected to run in Host (interactive) mode, we abort device setup now!"
 		exit
 	else
-		echo "[ opsec ] Not an USB gadget, continue..."
+		echo "[ hotspot ] Not an USB gadget, continue..."
 	fi
 
 
 	# check if ethernet over USB should be used
-	if $USB_RNDIS || $USB_ECM; then
+	if ${USB_RNDIS:-} || ${USB_ECM:-}; then
 		USB_ETHERNET=true
 	fi
 
@@ -366,7 +358,7 @@ usb-init() {
 	fi
 }
 usb-ethernet-init() {
-	echo "[ opsec ] Initializing Ethernet over USB..."
+	echo "[ hotspot ] Initializing Ethernet over USB..."
     (
         usb-ethernet-active-interface
         
@@ -403,7 +395,7 @@ usb-ethernet-active-interface() {
 	# Note: Detection for RNDIS (usb0) is done first. In case it is active, link availability
 	#	for ECM (usb1) is checked anyway (in case both interfaces got link). This is done
 	#	to use ECM as prefered interface on MacOS and Linux if both, RNDIS and ECM, are supported.
-	if $USE_RNDIS && $USE_ECM; then
+	if ${USE_RNDIS:-} && ${USE_ECM:-}; then
 		# bring up both interfaces to check for physical link
 		ifconfig usb0 up
 		ifconfig usb1 up 
@@ -472,7 +464,7 @@ usb-ethernet-active-interface() {
 }
 usb-ethernet-create-dhcp-config() {
 	# create DHCP config file for dnsmasq
-	echo "[ opsec ] Creating DHCP configuration for Ethernet over USB..."
+	echo "[ hotspot ] Creating DHCP configuration for Ethernet over USB..."
 
 	cat <<- EOF > /tmp/dnsmasq_usb_eth.conf
 		bind-interfaces
