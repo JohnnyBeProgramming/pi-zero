@@ -1,6 +1,6 @@
 # Setting up a Raspberry Pi Zero W
 
-This repository contains automation scripts to deploy a set of payloads to a Raspberri Pi Zero.
+This repository contains automation scripts to deploy payloads to a Raspberri Pi Zero.
 
 The following features are supported:
 
@@ -23,6 +23,22 @@ We assume you have the following:
 # You can test your ssh connection to the pi with this command
 ssh admin@respberrypi.local whoami
 ```
+
+# Install using nix
+
+Nix is a very powerfull tool to manage package dependencies on any 
+operating system, including Raspberry Pi's. Using nix, we can also 
+automatically build pre-configured images that we can burn directly 
+to an SD image, ready to boot in our pi.
+
+```bash
+# Build the setup packages
+nix-build
+
+# Start a local shell with dependencies installed
+nix-shell
+```
+
 
 # Installation steps
 
