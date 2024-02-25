@@ -41,7 +41,7 @@ WIFI_CLIENT_OVERWRITE_PSK=true # unused right now, in case the network WIFI_CLIE
 # ---------------------
 
 WIFI_ACCESSPOINT=true
-WIFI_ACCESSPOINT_NAME="🚧 $(hostname) 🚧"
+WIFI_ACCESSPOINT_NAME="club403.io"
 WIFI_ACCESSPOINT_AUTH=true # Use WPA2_PSK if true, no authentication if false
 WIFI_ACCESSPOINT_CHANNEL=6
 WIFI_ACCESSPOINT_PSK="DangerDanger"
