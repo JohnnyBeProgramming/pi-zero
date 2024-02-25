@@ -3,12 +3,23 @@
   sources ? import ./nix/sources.nix,
 }:
 
-# Load packages from the source definition
-let pkgs = import sources.nixpkgs {
+let 
+  # Load packages from the source definition
+  pkgs = import sources.nixpkgs {
     config = { };
     overlays = [ ];
     inherit system;
   };
-  
-# Package and built the setup packages
-in pkgs.callPackage ./setup.nix { }
+
+  # Import additional setup packages and payloads
+  setup = pkgs.callPackage ./setup.nix {};
+  example = pkgs.callPackage ./nix/example/hello.nix {};
+
+in rec {
+  inherit setup;
+
+  # Define a shell with the setup loaded
+  shell = pkgs.mkShellNoCC {
+    inputsFrom = [ setup ];
+  };
+}

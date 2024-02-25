@@ -33,7 +33,7 @@ to an SD image, ready to boot in our pi.
 
 ```bash
 # Build the setup packages
-nix-build
+nix-build -A setup
 
 # Start a local shell with dependencies installed
 nix-shell
