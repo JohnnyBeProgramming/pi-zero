@@ -57,6 +57,10 @@ main() {
             # Base off stable version
             image-from-url "https://downloads.raspberrypi.org/raspbian_lite/images/raspbian_lite-2017-04-10/2017-04-10-raspbian-jessie-lite.zip"
         ;;
+        burn)
+            # Copy setup folder to installation media
+            image-from-base $@
+        ;;
         setup)
             # Copy setup folder to installation media
             image-setup $@
@@ -110,9 +114,9 @@ image-from-base() {
     local path=$(select-volume $volume)
     
     # Rebase the setup from abase image
-    image-restore $file
+    image-restore $file $volume
     image-setup $path
-    #image-bootloader $path
+    image-bootloader $path
 }
 
 up-to-date() {
