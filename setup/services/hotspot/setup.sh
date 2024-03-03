@@ -66,8 +66,8 @@ upgrade() {
             break
         fi
     done
-    echo "Outbound interface: $ifout"
     if [ ! -z "${ifout:-}" ] && [ ! -f "/etc/iptables.ipv4.nat" ]; then
+        echo "Outbound interface: $ifout"
         echo "Adding IP routing rules: /etc/iptables.ipv4.nat"
 
         # Add IP masquerading for outbound traffic on (eth0|usb0) using iptable

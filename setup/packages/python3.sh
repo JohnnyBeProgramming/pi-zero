@@ -5,8 +5,8 @@ sudo apt-get -y install python3-pip python3-dev
 exit 0
 
 # Install latest version of python
-local tag="3.11.5"
-local bin="python3.11"
+tag="3.11.5"
+bin="python3.11"
 
 if [ ! -f /usr/local/bin/$bin ]
 then

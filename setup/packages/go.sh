@@ -3,12 +3,16 @@
 set -euo pipefail # Stop running the script on first error...
 # --------------------------------------------------------------
 
+if which go > /dev/null; then
+    exit 0
+fi
+
 # Install golang
 #sudo apt-get install golang
 
 # Install newer version of golang
-local tag="1.21.4"
-local arch=$(uname -m)
+tag="1.21.4"
+arch=$(uname -m)
 if ! go version | grep $tag > /dev/null; then
     wget https://go.dev/dl/go$tag.linux-$arch.tar.gz
     sudo tar -C /usr/local -xzf go$tag.linux-$arch.tar.gz
