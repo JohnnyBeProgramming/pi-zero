@@ -27,17 +27,17 @@ check-internet() {
 }
 
 install-dependencies() {
-    local install=()
+    local install=""
     for pkg in "$@"; do
         # Check if each provided dependency is installed
-        if [ -z "$(apt show $pkg 2> /dev/null | grep "Version: " | cut -d ':' -f2- | tr -d ' ' || true)" ]; then
-            install+=($pkg)
+        if ! dpkg -l $pkg 2> /dev/null > /dev/null; then
+            install+="$pkg "
         fi
     done
     
     # Install missing packages (if needed)
     if [ ! -z "${install:-}" ]; then
-        echo "Installing packages: '${install:-}'"
+        echo "Installing packages: ${install:-}"
         sudo apt install -y ${install:-}
     fi
 }

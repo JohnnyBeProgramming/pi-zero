@@ -111,12 +111,13 @@ image-from-url() {
 image-from-base() {
     local file=$1
     local volume=${2:-$(select-disk)}
-    local path=$(select-volume $volume)
     
     # Rebase the setup from abase image
     image-restore $file $volume
-    image-setup $path
+    
+    local path=$(select-volume $volume)
     image-bootloader $path
+    image-setup $path
 }
 
 up-to-date() {
