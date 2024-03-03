@@ -30,7 +30,7 @@ main() {
     # Configure volume
     echo "Copying setup files to $TARGET_HOST"
     printf "${dim:-}"
-    tar zcf - ./setup | ssh $TARGET_HOST "tar zxvf - ./setup && ./setup/install.sh"
+    tar zcf - ./setup | ssh $TARGET_HOST "tar zxf - ./setup && ./setup/install.sh"
     printf "${reset:-}"
 }
 

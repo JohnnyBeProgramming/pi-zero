@@ -74,7 +74,7 @@ install-packages() {
             local label="${bold}${name}${reset}"
             local version="${dim}(${tags})${reset}"
             local upgrade=false
-            
+
             # Check if the package is installed and up to date
             if [ "$tags" == "*" ] && [ ! -z "$(which $name)" ]; then
                 # Up to date...
@@ -83,7 +83,7 @@ install-packages() {
                 found="*"
             else
                 # Try and find current package version
-                found=$(apt show $name 2> /dev/null | grep "Version: " | cut -d ':' -f2- | tr -d ' ' || true)
+                found=$(dpkg -s $name 2> /dev/null | grep Version | cut -d ' ' -f2 || true)
                 version="${dim}($found)${reset}"
             fi
             
@@ -153,20 +153,20 @@ install-services() {
             local enable=$(echo "$line" | cut -d '=' -f2)
             local prefix="${dim}[ ${dim}-${dim} ]${reset}"
             local label="${dim}${name}${reset}"
-            local status="${dim}(${enable})${reset}"
-
-            # If this is a cust defined service, (re)create the service
-            local service_path="$services/$name"
-            if [ -d "$service_path" ]
-            then
-                install-custom-service "$name" "$service_path"
-            fi
+            local status="${dim}(${enable})${reset}"            
 
             # Check if service is installed and it's status
             local found=$(systemctl is-enabled $name 2> /dev/null)
             local old=$([ "${found:-}" == "enabled" ] && echo ON)
             local new=$([ "${enable:-}" == "true" ] && echo ON)            
             local action=""
+
+            # If this is a cust defined service, (re)create the service
+            local service_path="$services/$name"
+            if [ -d "$service_path" ] && [ "${old:-}" != "ON" ]; then
+                install-custom-service "$name" "$service_path"
+            fi
+
             if [ -z "${found:-}" ]; then
                 # Service not found...
                 prefix="${dim}[ ✘ ]${reset}"
@@ -196,7 +196,7 @@ install-services() {
             fi
 
             echo "${prefix} ${label} ${status} ${reset}"
-
+            
             if [ ! -z "${action:-}" ]; then
                 sudo systemctl $action $name || fail "Failed to ${action} service: $name"
             fi
