@@ -58,12 +58,16 @@ upgrade() {
     fi
     
     # Add IP routing rules if needed
-    local ifout=usb0 #eth0
-    #local ifopts=("eth0" "usb0" "lo")
-    #for iface in ${ifopts[@]}; do
-    #    echo "$iface"
-    #done
-    if [ ! -f "/etc/iptables.ipv4.nat" ]; then
+    local ifout=
+    local ifopts=("eth0" "usb0" "lo")
+    for iface in ${ifopts[@]}; do
+        if ifconfig $iface 2> /dev/null > /dev/null; then
+            ifout=$iface
+            break
+        fi
+    done
+    echo "Outbound interface: $ifout"
+    if [ ! -z "${ifout:-}" ] && [ ! -f "/etc/iptables.ipv4.nat" ]; then
         echo "Adding IP routing rules: /etc/iptables.ipv4.nat"
 
         # Add IP masquerading for outbound traffic on (eth0|usb0) using iptable
