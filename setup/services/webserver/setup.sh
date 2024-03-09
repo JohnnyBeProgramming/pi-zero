@@ -9,7 +9,8 @@ config() {
     export SETUP_NAME=${1:-"$(basename $THIS_DIR)"}
     export SETUP_PATH=${2:-$THIS_DIR}
 
-    WWW_DIR=${WWW_DIR:-"$THIS_DIR/www"}
+    WWW_DIR=${WWW_DIR:-"/usr/share/nginx/html/"}
+    CFG_DIR=${CFG_DIR:-"/etc/nginx/conf.d/"}
 }
 
 setup() {
@@ -21,17 +22,24 @@ setup() {
     # Install any dependencies used by this service (if not already installed)
     install-dependencies nginx
     
-    # Copy template web contents (if needed)
-    [ -d "$WWW_DIR" ] || mkdir -p "$WWW_DIR"
-    [ -d "/www" ] || cp -rf "$WWW_DIR" /www
+    # Copy template web contents
+    if [ -d "$THIS_DIR/www" ]; then
+        # Creating sample folder with www content
+        sudo rsync -a "$THIS_DIR/www" "$WWW_DIR"
+    fi
 
-    # Adjust the Firewall if needed
-    echo "TODO: ..."
-    echo sudo ufw status #| grep 'Nginx HTTP'
-    echo sudo ufw allow 'Nginx HTTP'
+    # Copy the configurations
+    if [ -d "$CFG_DIR" ]; then
+        sudo rsync -a "$THIS_DIR/config/" "$CFG_DIR"
+    fi
 
-    systemctl status nginx
-    #sudo systemctl reload nginx
+    # Display folder details
+    echo "Current nginx details:"
+    echo " - Website Dir: $WWW_DIR"
+    echo " - Config Path: $CFG_DIR"
+    echo "Reloading nginx..."
+
+    sudo systemctl reload nginx
 }
 
 setup $@ # <-- Bootstrap the script

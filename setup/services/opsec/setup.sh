@@ -22,8 +22,8 @@ setup() {
     # Install any dependencies used by this service (if not already installed)
     install-dependencies nmap gobuster 
     install-taskfile
-    install-rustscan
     install-hugo
+    #install-rustscan
     
     # Recreate the service manifest and update to latest
     #install-service $SETUP_NAME "$HOME/.services/$SETUP_NAME"
