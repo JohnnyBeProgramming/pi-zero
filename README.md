@@ -47,7 +47,7 @@ script, to install required dependencies and setup the pi zero for use.
 
 ## Option 1: From your host machine, install over ssh
 ```bash
-cat ./setup/install.sh | ssh admin@respberrypi.local
+./setup/deploy.sh admin@respberrypi.local
 # <-- Now you should be prompted for the ssh password, then it starts installing
 ```
 
