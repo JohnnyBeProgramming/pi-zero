@@ -2,6 +2,11 @@
 # --------------------------------------------------------------
 set -euo pipefail # Stop running the script on first error...
 # --------------------------------------------------------------
+# See also: 
+# - https://thepi.io/how-to-use-your-raspberry-pi-as-a-wireless-access-point/
+# - https://raspberrypi.stackexchange.com/questions/88438/raspberry-pi-as-access-point-with-captive-portal/106018#106018
+# - https://pimylifeup.com/raspberry-pi-captive-portal/
+# --------------------------------------------------------------
 THIS_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 
 setup() {
@@ -26,14 +31,6 @@ config() {
 }
 
 upgrade() {
-    # See also: 
-    #  - https://thepi.io/how-to-use-your-raspberry-pi-as-a-wireless-access-point/
-    #  - https://raspberrypi.stackexchange.com/questions/88438/raspberry-pi-as-access-point-with-captive-portal/106018#106018
-
-    # Stop services while we configure them
-    # sudo systemctl stop hostapd || true
-    #sudo systemctl stop dnsmasq || true
-    
     # Assign static IP in local network for wlan0
     # if ! cat /etc/dhcpcd.conf | grep -v '#.*' | grep 'interface wlan0' > /dev/null; then
     #     cat "$THIS_DIR/etc/dhcpcd.conf" | sudo tee -a /etc/dhcpcd.conf > /dev/null
@@ -59,7 +56,7 @@ upgrade() {
     fi
 
     # -------------------------------
-    
+
     # Add IP routing rules if needed
     local ifout=
     local ifopts=("eth0" "usb0" "lo")
@@ -112,6 +109,28 @@ upgrade() {
     echo "Start the dns server..."
     sudo systemctl start dnsmasq
 
+}
+
+setup-captive-portal() {
+    sudo apt update
+    sudo apt upgrade
+    
+    sudo apt install -y libmicrohttpd-dev build-essential
+
+    git clone https://github.com/nodogsplash/nodogsplash.git ~/nodogsplash
+    cd ~/nodogsplash
+    make
+    sudo make install
+    
+    local wlan_ip=$(cat /etc/dnsmasq.conf | grep listen-address | cut -d '=' -f2)
+    cat <<- EOF | sudo tee /etc/nodogsplash/nodogsplash.conf > /dev/null
+GatewayInterface wlan0
+GatewayAddress $wlan_ip
+MaxClients 250
+AuthIdleTimeout 480
+EOF
+
+    sudo nodogsplash
 }
 
 setup $@ # <-- Bootstrap the script
