@@ -1,5 +1,5 @@
 [Unit]
-Description=$SETUP_NAME - Startup Service
+Description=$SETUP_NAME - System Service
 #After=systemd-modules-load.service
 After=local-fs.target
 DefaultDependencies=no

@@ -22,7 +22,7 @@ setup() {
     # Install any dependencies used by this service (if not already installed)
     install-dependencies nmap gobuster 
     install-taskfile
-    install-hugo
+    #install-hugo
     #install-rustscan
     
     # Recreate the service manifest and update to latest

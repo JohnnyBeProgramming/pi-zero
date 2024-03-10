@@ -8,7 +8,7 @@
 # ===========================================
 
 # We choose an IP with a very small subnet (see comments in README.rst)
-IF_IP="172.16.0.1" # IP used by P4wnP1
+IF_IP="172.16.0.1" # IP used by pi zero
 IF_MASK="255.255.255.252"
 IF_DHCP_RANGE="172.16.0.2,172.16.0.2" # DHCP Server IP Range
 
