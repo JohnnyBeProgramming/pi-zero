@@ -4,11 +4,9 @@ This repository contains automation scripts to deploy payloads to a Raspberri Pi
 
 The following features are supported:
 
- - Enable SSH (if not already enabled) and run on system startup
- - Check for internet connection, and update system OS to latest
+ - Modify raspberry boot image to enable ethernet over USB data cable
  - Install developer tools (eg: git, python, sqlite, rust, golang)
  - Install wireless access point tools (eg: to create a wifi hotspot)
- - Install network tools that can be used to capture and analize network packets
 
 
 # Prerequisites
@@ -24,6 +22,34 @@ We assume you have the following:
 ssh admin@respberrypi.local whoami
 ```
 
+
+# Installation steps
+
+Broadly speaking, there are a few steps required to set up your raspberry pi:
+
+ 1) Burn a new raspios image to an SD card (we used `raspios-bullseye-armhf-lite.img`)
+ 2) Configure SSH access over a USB/Eternet data cable (attached to your host)
+ 3) Detach SD card and boot up raspberry pi with the new SD card (this might take a while)
+ 4) Once the device is online and ready, remotely deploy setup using `ssh` and install
+
+To simplify and streamline the installation process, we created the `deploy.sh` 
+script, to install required dependencies and setup the pi zero for use.
+
+```bash
+./setup/deploy.sh user@respberrypi.local
+# <-- Now you should be prompted for the ssh password, then it starts installing
+```
+
+Alternatively, if you have direct access through a keyboard and terminal, you can install using git:
+
+```bash
+sudo apt install git
+git clone --recursive https://github.com/JohnnyBeProgramming/pi-zero.git
+sudo ./pi-zero/setup/install.sh
+```
+
+
+
 # Install using nix
 
 Nix is a very powerfull tool to manage package dependencies on any 
@@ -38,23 +64,3 @@ nix-build -A setup
 # Start a local shell with dependencies installed
 nix-shell
 ```
-
-
-# Installation steps
-
-To simplify and streamline the installation process, we created the `install.sh` 
-script, to install required dependencies and setup the pi zero for use.
-
-## Option 1: From your host machine, install over ssh
-```bash
-./setup/deploy.sh admin@respberrypi.local
-# <-- Now you should be prompted for the ssh password, then it starts installing
-```
-
-## Option 2: On the raspberry pi zero, install from git
-```bash
-sudo apt install git
-git clone --recursive https://github.com/JohnnyBeProgramming/pi-zero.git
-sudo ./pi-zero/setup/install.sh
-```
-
