@@ -20,7 +20,7 @@ setup() {
     source "$THIS_DIR/../utils.sh"
     
     # Install any dependencies used by this service (if not already installed)
-    install-dependencies nmap gobuster 
+    install-dependencies nmap gobuster
     install-taskfile
     #install-hugo
     #install-rustscan
