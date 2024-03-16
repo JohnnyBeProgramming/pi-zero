@@ -34,7 +34,7 @@ main() {
     check-deps
     
     # Install and upgrade specified packages and services
-    # update-os
+    update-os
     install-packages
     install-services
 }
