@@ -1,0 +1,30 @@
+image:
+  url: https://downloads.raspberrypi.org/raspbian_lite_latest
+  path: ./images/current.img
+network:
+  hostname: raspberrypi
+  ssh:
+    user: admin
+    pass: # <-- Desired SSH password
+  wifi:
+    ssid: WiFi SSID
+    psk: # <-- WPA/WPA2 passphrase
+    country: BE
+boot:
+  config.txt:
+    - { append: dtoverlay=dwc2 }
+  cmdline.txt:
+    - { replace: rootwait, value: modules-load=dwc2, g_ether }
+  ssh.txt:
+    - content: ""
+  wpa_supplicant.conf:
+    - content: |-
+        ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+        update_config=1
+        country=BE
+
+        network={
+          ssid="WiFi SSID"
+          psk="WPA/WPA2 passphrase"
+          key_mgmt=WPA-PSK
+        }
