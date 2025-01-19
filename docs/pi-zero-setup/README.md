@@ -1,3 +1,15 @@
+# Automated Setup Script
+
+To simplify and automate the setup of your pi image, use the setup script:
+
+```bash
+cd docs/pi-zero-setup
+
+./setup.sh 
+```
+
+# Step by step instructions
+
   1. Download the Raspbian Lite image from https://downloads.raspberrypi.org/raspbian_lite_latest (add .torrent to get a torrent)
 ```bash
 # Download the latest image
