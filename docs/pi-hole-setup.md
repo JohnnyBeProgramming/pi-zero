@@ -1,8 +1,10 @@
 # Installing pi hole
 
- - See also: https://www.tomshardware.com/how-to/static-ip-raspberry-pi
+ - See also: 
+    - https://www.tomshardware.com/how-to/static-ip-raspberry-pi
+    - https://www.raspberrypi.com/documentation/computers/configuration.html#networking
 
- - Make sure you have a fresh new image on a SD card, and enable some features:
+ - Make sure you have a fresh new image on a SD card, and enable some features before first boot:
    The image mounted for me at `/Volumes/bootfs`.
 ```bash
 # File: /Volumes/bootfs/cmdline.txt
@@ -30,7 +32,15 @@ EOF
 ```
 
  - Next we need to set a static IP for our pi. Use the info collected above. 
+```bash
+# Using network manager
+nmcli con mod preconfigured ipv4.addresses 192.168.128.99/24
+nmcli con mod preconfigured ipv4.gateway 192.168.128.1
+nmcli con mod preconfigured ipv4.dns 8.8.8.8
+
+sudo reboot
 ```
+```bash
 sudo nano /etc/dhcpcd.conf
 
 # File: /etc/dhcpcd.conf
