@@ -31,6 +31,8 @@ EOF
 main() {
     ACTION=${1:-}; [ -z "${1:-}" ] || shift;
 
+    [ ! -f .env ] || source .env # Load untracked secrets
+
     case ${ACTION:-"default"} in
         default) help;;
         image) setup-image $@;;
@@ -74,6 +76,12 @@ setup-boot() {
 
     echo "Updating SD Card boot config: $RPI_BOOT_PATH"
     setup-boot-image "$RPI_BOOT_PATH"
+
+    # Setup wifi if settings were included
+    setup-wifi
+    
+    # Notify user to unmount and add SD card
+    echo "You can now unmount the SD card and add to the pi device"
 }
 
 setup-wifi() {
@@ -82,12 +90,29 @@ setup-wifi() {
     RPI_WIFI_PSK=${RPI_WIFI_PSK:-"$(yq -r '.network.wifi.psk' setup.yaml)"}
     RPI_WIFI_COUNTRY=${RPI_WIFI_COUNTRY:-"$(yq -r '.network.wifi.country' setup.yaml)"}
 
+    [ ! -z "${RPI_WIFI_SSID:-}" ] || return
+    [ ! -z "${RPI_WIFI_PSK:-}" ] || return
+
     # Set additional defaults
     : "${RPI_WIFI_TYPE:="WPA-PSK"}"
     : "${RPI_WIFI_SSID:=""}"
     : "${RPI_WIFI_PSK:=""}"
     : "${RPI_WIFI_COUNTRY:=""}"
 
+    # Setup wifi if settings were included
+    echo "Setting up WIFI: $RPI_BOOT_PATH/wpa_supplicant.conf"
+    boot-write "$RPI_BOOT_PATH/wpa_supplicant.conf" "$(cat << EOF
+ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1
+country=$RPI_WIFI_COUNTRY
+
+network={
+	ssid="$RPI_WIFI_SSID"
+	psk="$RPI_WIFI_PSK"
+	key_mgmt=$RPI_WIFI_TYPE
+}
+EOF
+)"
 }
 
 setup-boot-image() {
@@ -110,11 +135,7 @@ setup-boot-image() {
     boot-replace "$boot/cmdline.txt" "rootwait" "rootwait modules-load=dwc2,g_ether"
     boot-write "$boot/ssh.txt" ""
 
-    # Setup wifi if settings were included
-    boot-setup-wifi
     
-    # Notify user to unmount and add SD card
-    echo "You can now unmount the SD card and add to the pi device"
 }
 
 setup-boot-file() {
@@ -179,27 +200,6 @@ boot-write() {
     local data=$2
     mkdir -p "$(dirname "$file")"
     echo "$data" > "$file"
-}
-
-boot-setup-wifi() {
-    [ ! -z "${RPI_WIFI_TYPE:-}" ] || return
-    [ ! -z "${RPI_WIFI_SSID:-}" ] || return
-    [ ! -z "${RPI_WIFI_PSK:-}" ] || return
-    [ ! -z "${RPI_WIFI_COUNTRY:-}" ] || return
-
-    echo "Setting up WIFI: $RPI_BOOT_PATH/wpa_supplicant.conf"
-    boot-write "$RPI_BOOT_PATH/wpa_supplicant.conf" "$(cat << EOF
-ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
-update_config=1
-country=$RPI_WIFI_COUNTRY
-
-network={
-	ssid="$RPI_WIFI_SSID"
-	psk="$RPI_WIFI_PSK"
-	key_mgmt=$RPI_WIFI_TYPE
-}
-EOF
-)"
 }
 
 throw() {

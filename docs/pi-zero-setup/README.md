@@ -3,9 +3,7 @@
 To simplify and automate the setup of your pi image, use the setup script:
 
 ```bash
-cd docs/pi-zero-setup
-
-./setup.sh 
+./setup.sh /path/to/sdcard /Volume/boot
 ```
 
 # Step by step instructions
