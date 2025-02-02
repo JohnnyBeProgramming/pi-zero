@@ -1,3 +1,5 @@
 images
 temp
 result
+.env
+.DS_Store

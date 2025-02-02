@@ -7,46 +7,50 @@ set -euo pipefail # Stop running the script on first error...
 # --------------------------------------------------------------
 THIS_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 
-help() {
-    echo "Setup a SD Card image for a Raspberry Pi"
-    echo ""
-    echo "Basic Usage:"
-    echo "  $0 <disk-mount> [ <volume-boot-path> ]"
-    echo ""
-    echo "Disk Mounts:"
-    diskutil list | grep "(external, physical)" | awk '{print $1}' | sed 's|^| - |'
-    echo ""
-    echo "(optional) Volume Boot Path:"
-    echo " - This is the mounted path to the boot drive"
-    echo " - Copies and modified the base image with the current setup"
-    echo " - eg: /Volumes/boot/"
-    echo ""
-}
+help() { 
+    cat << EOF
+Setup a SD Card image for a Raspberry Pi
 
-config() {
-    # Set the core installation config settings
-    RPI_IMAGE_DISK=${1:-"$(diskutil list | grep "(external, physical)" | awk '{print $1}')"}
-    RPI_BOOT_PATH=${2:-""}
+Basic Usage:
+  $0 ACTION [ args ]
 
-    # Check for required args
-    [ ! -z "${RPI_IMAGE_DISK:-}" ] || (help && exit 1)
+Actions:
+  image <disk-mount> [ <volume-boot-path> ]
+  boot <volume-boot-path>
 
-    # Load ENV from file (if exists)
-    [ ! -f "$THIS_DIR/setup.env" ] || source "$THIS_DIR/setup.env" # Persisted env
-    [ ! -f "$THIS_DIR/.env" ] || source "$THIS_DIR/.env" # Secrets (wifi, password, ect)
-    
-    # Set additional defaults
-    : "${RPI_IMAGE_FILE:="./images/current.img"}"
-    : "${RPI_IMAGE_URL:="https://downloads.raspberrypi.org/raspbian_lite_latest"}"
-    : "${RPI_WIFI_TYPE:="WPA-PSK"}"
-    : "${RPI_WIFI_SSID:=""}"
-    : "${RPI_WIFI_PSK:=""}"
-    : "${RPI_WIFI_COUNTRY:=""}"
+Disk Mounts:
+$(diskutil list | grep "(external, physical)" | awk '{print $1}' | sed 's|^| - |')
+
+Volume Boot Path:
+ - This is the mounted path to the boot drive
+ - Copies and modified the base image with the current setup
+ - eg: /Volumes/boot/
+EOF
 }
 
 main() {
-    # Setup basic config and check for an active internet connection
-    config $@
+    ACTION=${1:-}; [ -z "${1:-}" ] || shift;
+
+    case ${ACTION:-"default"} in
+        default) help;;
+        image) setup-image $@;;
+        boot) setup-boot $@;;
+        wifi) setup-wifi;;
+        *) help && exit 1
+    esac    
+}
+
+setup-image() {
+    # Check for required args
+    RPI_IMAGE_DISK=${1:-""}
+    RPI_BOOT_PATH=${2:-""}
+
+    [ ! -z "${RPI_IMAGE_DISK:-}" ] || (help && exit 1)
+
+    : "${RPI_IMAGE_FILE:="$(yq -r '.image.file' setup.yaml)"}"
+    : "${RPI_IMAGE_FILE:="./images/current.img"}"
+    : "${RPI_IMAGE_URL:="$(yq -r '.image.url' setup.yaml)"}"
+    : "${RPI_IMAGE_URL:="https://downloads.raspberrypi.org/raspbian_lite_latest"}"
 
     # Download the base image (if not available)    
     if [ ! -f "$RPI_IMAGE_FILE" ]; then
@@ -54,40 +58,77 @@ main() {
     fi
 
     # Burn the base image and add additional config
-    #copy-image "$RPI_IMAGE_FILE" "$RPI_IMAGE_DISK"
+    copy-image "$RPI_IMAGE_FILE" "$RPI_IMAGE_DISK"
+
+    if [ ! -z "${RPI_BOOT_PATH:-}" ]; then
+        setup-boot "$RPI_BOOT_PATH"
+    fi
+}
+
+setup-boot() {
+    RPI_BOOT_PATH=${1:-""}
 
     # Stop the script here if no boot volume was specified
-    [ ! -z "${RPI_BOOT_PATH:-}" ] || return
+    [ ! -z "${RPI_BOOT_PATH:-}" ] || (help && exit 1)
     [ -d "${RPI_BOOT_PATH:-}" ] || throw "The boot path '${RPI_BOOT_PATH:-}' does not exists."
 
-    echo "Updating boot config settings in '$RPI_BOOT_PATH'..."
-    
-    # Copy file that was staged from the setup/boot folder
-    while read path; do
-        local file="$(basename $path)"
-        local out="$RPI_BOOT_PATH/$file"
-        echo " + $out"
-        cat "$path" | envsubst > "$out"
-    done < <(find "$THIS_DIR/setup/boot" -type f)
+    echo "Updating SD Card boot config: $RPI_BOOT_PATH"
+    setup-boot-image "$RPI_BOOT_PATH"
+}
+
+setup-wifi() {
+    RPI_WIFI_TYPE=${RPI_WIFI_TYPE:-"$(yq -r '.network.wifi.type' setup.yaml)"}
+    RPI_WIFI_SSID=${RPI_WIFI_SSID:-"$(yq -r '.network.wifi.ssid' setup.yaml)"}
+    RPI_WIFI_PSK=${RPI_WIFI_PSK:-"$(yq -r '.network.wifi.psk' setup.yaml)"}
+    RPI_WIFI_COUNTRY=${RPI_WIFI_COUNTRY:-"$(yq -r '.network.wifi.country' setup.yaml)"}
+
+    # Set additional defaults
+    : "${RPI_WIFI_TYPE:="WPA-PSK"}"
+    : "${RPI_WIFI_SSID:=""}"
+    : "${RPI_WIFI_PSK:=""}"
+    : "${RPI_WIFI_COUNTRY:=""}"
+
+}
+
+setup-boot-image() {
+    local boot="$1"
 
     # Apply overlays from the setup.yaml file
-    while read file; do
-        local out="$RPI_BOOT_PATH/$file"
-        while read json; do
-            echo " + $out < $json"
-        done < <(yq -r -o=json -I0 ".boot[\"${file}\"][]" setup.yaml)
-    done < <(yq -r '.boot | keys[]' $THIS_DIR/setup.yaml)
-    exit 0
+    #while read json; do 
+    #    setup-boot-overlay "$json"; 
+    #done < <(yq -r -o=json -I0 '.overlays[]' $THIS_DIR/setup.yaml)
+    #
+    #while read file; do
+    #    local out="$boot/$file"
+    #    while read json; do
+    #        echo " + $out < $json"
+    #    done < <(yq -r -o=json -I0 ".boot[\"${file}\"][]" setup.yaml)
+    #done < <(yq -r '.boot | keys[]' $THIS_DIR/setup.yaml)
+    #exit 0
 
-    boot-append "$RPI_BOOT_PATH/config.txt" "dtoverlay=dwc2"
-    boot-replace "$RPI_BOOT_PATH/cmdline.txt" "rootwait" "rootwait modules-load=dwc2,g_ether"
-    boot-write "$RPI_BOOT_PATH/ssh.txt" ""
+    boot-append "$boot/config.txt" "dtoverlay=dwc2"
+    boot-replace "$boot/cmdline.txt" "rootwait" "rootwait modules-load=dwc2,g_ether"
+    boot-write "$boot/ssh.txt" ""
 
     # Setup wifi if settings were included
     boot-setup-wifi
     
     # Notify user to unmount and add SD card
     echo "You can now unmount the SD card and add to the pi device"
+}
+
+setup-boot-file() {
+    local path="$1"
+    local out="${2:-"$RPI_BOOT_PATH/$(basename $path)"}"
+    echo " + $out"
+    cat "$path" | envsubst > "$out"
+}
+
+setup-boot-overlay() {
+    local json="$1"
+
+    # yq -r -o=json -I0 '.overlays[]' setup.yaml
+    echo " ± $json"
 }
 
 download-image() {
@@ -107,7 +148,7 @@ copy-image() {
     local file="$1"
     local path="$2"
 
-    echo "Writing image '$file' to '$path'..."
+    echo "Writing image '$file' to '$path'...(requires sudo)"
 
     # diskutil list | grep "(external, physical)" | awk '{print $1}'    
     diskutil unmountDisk "$path"

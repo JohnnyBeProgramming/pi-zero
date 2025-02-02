@@ -1,0 +1,50 @@
+# Specify the OS base image to copy to SD card
+image:
+  url: https://downloads.raspberrypi.org/raspbian_lite_latest
+  file: ./images/current.img
+
+# Configure networking and how to connect to the device
+network:
+  hostname: raspberrypi
+  ssh: 
+    enabled: true
+    user: admin
+    pass: # <-- Desired SSH password
+  wifi:
+    country: BE
+    type: WPA-PSK
+    ssid: # <-- WiFi SSID
+    psk: # <-- WPA/WPA2 passphrase
+
+# --------------------------------------------------
+# TODO: Support generic first boot overlays
+# --------------------------------------------------
+volumes:
+  /apps: {}
+  /data: {}
+boot:
+  ssh.txt: ""
+  config.txt:
+    dtoverlay: dwc2
+  cmdline.txt:
+    modules-load: [dwc2,g_ether]
+  overlays:
+    - file: config.txt
+      test: dtoverlay=dwc2
+      swap: s|\$|\n$test|
+    - file: cmdline.txt
+      test: modules-load=dwc2,g_ether
+      swap: s|rootwait|rootwait $test|
+    - file: ssh.txt
+      data: ""
+    - file: wpa_supplicant.conf
+      data: |-
+        ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+        update_config=1
+        country=$RPI_WIFI_COUNTRY
+
+        network={
+          ssid="$RPI_WIFI_SSID"
+          psk="$RPI_WIFI_PSK"
+          key_mgmt=$RPI_WIFI_TYPE
+        }
