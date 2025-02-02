@@ -22,16 +22,6 @@ boot:
     dtoverlay: dwc2
   cmdline.txt:
     modules-load!: [dwc2, g_ether]
-  wpa_supplicant.conf: |-
-    ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
-    update_config=1
-    country=$RPI_WIFI_COUNTRY
-
-    network={
-      ssid="$RPI_WIFI_SSID"
-      psk="$RPI_WIFI_PSK"
-      key_mgmt=$RPI_WIFI_TYPE
-    }
 
   overlays:
     - file: config.txt

@@ -2,4 +2,5 @@ images
 temp
 result
 .env
+.env.yaml
 .DS_Store
