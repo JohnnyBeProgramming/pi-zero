@@ -1,16 +1,19 @@
-#!/bin/bash
-
+#!/usr/bin/env bash
+# --------------------------------------------------------------
+set -euo pipefail # Stop running the script on first error...
 set +e
+# --------------------------------------------------------------
+: "${BOOT_PATH:="/boot"}"
+: "${BOOT_INIT:="$BOOT_PATH/init.d"}"
 
 main() {
-   init "/boot/init.d/network.hostname.sh"   # Set the hostname
-   init "/boot/init.d/network.ssh.sh"        # Set SSH configuration
-   init "/boot/init.d/network.ssh.sh"        # Set SSH settings
-   init "/boot/init.d/network.wifi.sh"       # Set WIFI Settings
-   init "/boot/init.d/locale.sh"             # Set Keyboard settings
+   # Run all boot init scripts
+   if [ -d "$BOOT_INIT" ]; then
+      find "$BOOT_INIT" -type f -exec echo {} \; 
+   fi
 
    # Remove init scripts after first successful run
-   remove
+   cleanup
 }
 
 init() {
@@ -19,11 +22,12 @@ init() {
    "$script" $@
 }
 
-remove() {
+cleanup() {
    # Remove init scripts after first successful run
-   rm -f /boot/firstrun.sh
-   sed -i 's| systemd.run.*||g' /boot/cmdline.txt
-   exit 0
+   rm -f "$BOOT_PATH/firstrun.sh"
+   if [ -f "$BOOT_PATH/cmdline.txt" ]; then
+      sed -i 's| systemd.run.*||g' "$BOOT_PATH/cmdline.txt"
+   fi
 }
 
 main $@ # <-- Bootstrap script

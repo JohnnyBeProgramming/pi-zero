@@ -39,7 +39,6 @@ main() {
             [ -z "${2:-}" ] || setup-boot "${2:-}"
             ;;
         boot) setup-boot $@;;
-        wifi) setup-wifi $@;;
         *) help && exit 1
     esac    
 }
@@ -65,8 +64,7 @@ setup-image() {
 }
 
 setup-boot() {
-    local path=${1:-"$(help && exit 1)"}
-    local url=$(setup-get ".image.url" || echo "https://downloads.raspberrypi.org/raspbian_lite_latest")
+    local path=${1:-""}
 
     # Stop the script here if no boot volume was specified
     [ -d "${path:-}" ] || throw "The boot path '${path:-}' does not exists."
@@ -77,38 +75,19 @@ setup-boot() {
     echo "You can now unmount the SD card and add to the pi device"
 }
 
-setup-wifi() {
-    local path=${1:-"$(help && exit 1)"}
-    local type=$(setup-get ".network.wifi.type" || echo "WPA-PSK")
-    local ssid=$(setup-get ".network.wifi.ssid" || echo "")
-    local psk=$(setup-get ".network.wifi.psk" || echo "")
-    local country=$(setup-get ".network.wifi.country" || echo "")
-
-    # Skip if no values are specified
-    [ ! -z "${ssid:-}" ] || return
-    [ ! -z "${psk:-}" ] || return
-
-    # Setup wifi if settings were included
-    echo "Setting up WIFI: $path/wpa_supplicant.conf"
-    boot-write "$path/wpa_supplicant.conf" "$(cat << EOF
-ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
-update_config=1
-country=$country
-network={
-	ssid="$ssid"
-	psk="$psk"
-	key_mgmt=$type
-}
-EOF
-)"
-}
-
 setup-boot-image() {
     local boot="$1"
+    local boot_files="./setup/boot"
 
     echo "Updating SD Card boot config: $path"
 
-    # Apply overlays from the setup.yaml file
+    # Copy pre-defined boot files
+    if [ -d "$boot_files" ]; then 
+        echo "Copying boot files from: $boot_files"
+        cp -rf "$boot_files/" "$path"
+    fi
+
+    # Apply overlays from the setup.yaml file(s)
     while read json; do         
         setup-boot-overlay "$boot" "$json";
     done < <(setup-get -o=json -I0 '.boot.overlays[]')
@@ -123,9 +102,7 @@ setup-boot-image() {
 
     #boot-append "$boot/config.txt" "dtoverlay=dwc2"
     #boot-replace "$boot/cmdline.txt" "rootwait" "rootwait modules-load=dwc2,g_ether"
-    #boot-write "$boot/ssh.txt" ""
-
-    
+    #boot-write "$boot/ssh.txt" ""    
 }
 
 setup-boot-overlay() {

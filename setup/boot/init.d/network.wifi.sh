@@ -1,8 +1,18 @@
-WIFI_SSID=${WIFI_SSID:-"$(exit 0)"}
-WIFI_PSK=${WIFI_PSK:-"$(exit 0)"}
-WIFI_COUNTRY="BE"
-WIFI_INTERFACE="DIR=/var/run/wpa_supplicant GROUP=netdev"
+#!/usr/bin/env bash
+# --------------------------------------------------------------
+set -euo pipefail # Stop running the script on first error...
+# --------------------------------------------------------------
+: "${WIFI_COUNTRY:=""}"
+: "${WIFI_SSID:=""}"
+: "${WIFI_PSK:=""}"
+: "${WIFI_INTERFACE:="DIR=/var/run/wpa_supplicant GROUP=netdev"}"
 
+# Check if th script should run
+[ ! "${WIFI_COUNTRY:-}" == "" ] || exit 0
+[ ! "${WIFI_SSID:-}" == "" ] || exit 0
+[ ! "${WIFI_PSK:-}" == "" ] || exit 0
+
+# Create the wifi configuration (if provided)
 cat >/etc/wpa_supplicant/wpa_supplicant.conf <<'WPAEOF'
 country=$WIFI_COUNTRY
 ctrl_interface=$WIFI_INTERFACE
@@ -16,7 +26,7 @@ network={
 
 WPAEOF
 
-
+# Apply wifi settings
 chmod 600 /etc/wpa_supplicant/wpa_supplicant.conf
 rfkill unblock wifi
 for filename in /var/lib/systemd/rfkill/*:wlan ; do
