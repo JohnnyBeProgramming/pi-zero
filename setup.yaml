@@ -2,47 +2,58 @@
 image:
   url: https://downloads.raspberrypi.org/raspbian_lite_latest
   file: ./images/current.img
-
-# Configure networking and how to connect to the device
-network:
-  hostname: raspberrypi
-  ssh:
-    enabled: true
-    user: admin
-    pass: # <-- Desired SSH password
-  wifi:
-    country: BE
-    type: WPA-PSK
-    ssid: # <-- WiFi SSID
-    psk: # <-- WPA/WPA2 passphrase
-
 boot:
   ssh.txt: ""
   config.txt:
     dtoverlay: dwc2
   cmdline.txt:
-    modules-load!: [dwc2, g_ether]
-
+    modules-load:
+      dwc2: true
+      g_ether: true
+    # cfg80211.ieee80211_regdom=BE systemd.run=/boot/firstrun.sh systemd.run_success_action=reboot systemd.unit=kernel-command-line.target
+    cfg80211:
+      ieee80211_regdom: BE 
+    systemd:
+      run: /boot/init/firstrun.sh 
+      unit: kernel-command-line.target
+      run_success_action: reboot
+    
   overlays:
     - file: config.txt
-      test: dtoverlay=dwc2
-      swap: s|\$|\n$test|
+      append: dtoverlay=dwc2
     - file: cmdline.txt
-      test: modules-load=dwc2,g_ether
-      swap: s|rootwait|rootwait $test|
+      replace: rootwait
+      data: rootwait modules-load=dwc2,g_ether
     - file: ssh.txt
       data: ""
-    - file: wpa_supplicant.conf
-      data: |-
-        ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
-        update_config=1
-        country=$RPI_WIFI_COUNTRY
 
-        network={
-          ssid="$RPI_WIFI_SSID"
-          psk="$RPI_WIFI_PSK"
-          key_mgmt=$RPI_WIFI_TYPE
-        }
+    #- file: firstrun.sh
+    #  from: ./setup/boot/firstrun.sh
+
+    #- file: wpa_supplicant.conf
+    #  data: |-
+    #    ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+    #    update_config=1
+    #    country=$RPI_WIFI_COUNTRY
+    #    network={
+    #      ssid=$RPI_WIFI_SSID
+    #      psk=$RPI_WIFI_PSK
+    #      key_mgmt=$RPI_WIFI_TYPE
+    #    }
+
+# Configure networking and how to connect to the device
+admin:
+  user: admin
+  pass: # <-- Desired SSH password
+network:
+  hostname: raspberrypi
+  ssh:
+    enabled: true
+  wifi:
+    country: BE
+    type: WPA-PSK
+    ssid: # <-- WiFi SSID
+    psk: # <-- WPA/WPA2 passphrase
 
 # --------------------------------------------------
 # TODO: Support generic first boot overlays

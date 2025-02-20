@@ -33,83 +33,71 @@ main() {
 
     [ ! -f .env ] || source .env # Load untracked secrets
 
-    case ${ACTION:-"default"} in
-        default) help;;
-        image) setup-image $@;;
+    case ${ACTION:-""} in
+        image) 
+            setup-image $@
+            [ -z "${2:-}" ] || setup-boot "${2:-}"
+            ;;
         boot) setup-boot $@;;
-        wifi) setup-wifi;;
+        wifi) setup-wifi $@;;
         *) help && exit 1
     esac    
 }
 
+setup-get() {
+    local value=$(yq -r $@ setup.yaml)
+    [ "${value:-"null"}" != "null" ] && echo "$value" && return 0 || return 1
+}
+
 setup-image() {
     # Check for required args
-    RPI_IMAGE_DISK=${1:-""}
-    RPI_BOOT_PATH=${2:-""}
+    local disk=${1:-"$(help && exit 1)"}
+    local url=$(setup-get ".image.url" || echo "https://downloads.raspberrypi.org/raspbian_lite_latest")
+    local file=$(setup-get ".image.file" || echo "./images/$(basename $url).img")
 
-    [ ! -z "${RPI_IMAGE_DISK:-}" ] || (help && exit 1)
+    echo "Copying image: $disk < $file = $url"
 
-    : "${RPI_IMAGE_FILE:="$(yq -r '.image.file' setup.yaml)"}"
-    : "${RPI_IMAGE_FILE:="./images/current.img"}"
-    : "${RPI_IMAGE_URL:="$(yq -r '.image.url' setup.yaml)"}"
-    : "${RPI_IMAGE_URL:="https://downloads.raspberrypi.org/raspbian_lite_latest"}"
-
-    # Download the base image (if not available)    
-    if [ ! -f "$RPI_IMAGE_FILE" ]; then
-        download-image "$RPI_IMAGE_URL" "$RPI_IMAGE_FILE"
-    fi
+    # Download the base image (if not available)
+    [ -f "$file" ] || download-image "$url" "$file"
 
     # Burn the base image and add additional config
-    copy-image "$RPI_IMAGE_FILE" "$RPI_IMAGE_DISK"
-
-    if [ ! -z "${RPI_BOOT_PATH:-}" ]; then
-        setup-boot "$RPI_BOOT_PATH"
-    fi
+    copy-image "$file" "$disk"    
 }
 
 setup-boot() {
-    RPI_BOOT_PATH=${1:-""}
+    local path=${1:-"$(help && exit 1)"}
+    local url=$(setup-get ".image.url" || echo "https://downloads.raspberrypi.org/raspbian_lite_latest")
 
     # Stop the script here if no boot volume was specified
-    [ ! -z "${RPI_BOOT_PATH:-}" ] || (help && exit 1)
-    [ -d "${RPI_BOOT_PATH:-}" ] || throw "The boot path '${RPI_BOOT_PATH:-}' does not exists."
-
-    echo "Updating SD Card boot config: $RPI_BOOT_PATH"
-    setup-boot-image "$RPI_BOOT_PATH"
-
-    # Setup wifi if settings were included
-    setup-wifi
+    [ -d "${path:-}" ] || throw "The boot path '${path:-}' does not exists."
+    
+    setup-boot-image "$path"
     
     # Notify user to unmount and add SD card
     echo "You can now unmount the SD card and add to the pi device"
 }
 
 setup-wifi() {
-    RPI_WIFI_TYPE=${RPI_WIFI_TYPE:-"$(yq -r '.network.wifi.type' setup.yaml)"}
-    RPI_WIFI_SSID=${RPI_WIFI_SSID:-"$(yq -r '.network.wifi.ssid' setup.yaml)"}
-    RPI_WIFI_PSK=${RPI_WIFI_PSK:-"$(yq -r '.network.wifi.psk' setup.yaml)"}
-    RPI_WIFI_COUNTRY=${RPI_WIFI_COUNTRY:-"$(yq -r '.network.wifi.country' setup.yaml)"}
+    local path=${1:-"$(help && exit 1)"}
+    local type=$(setup-get ".network.wifi.type" || echo "WPA-PSK")
+    local ssid=$(setup-get ".network.wifi.ssid" || echo "")
+    local psk=$(setup-get ".network.wifi.psk" || echo "")
+    local country=$(setup-get ".network.wifi.country" || echo "")
 
-    [ ! -z "${RPI_WIFI_SSID:-}" ] || return
-    [ ! -z "${RPI_WIFI_PSK:-}" ] || return
-
-    # Set additional defaults
-    : "${RPI_WIFI_TYPE:="WPA-PSK"}"
-    : "${RPI_WIFI_SSID:=""}"
-    : "${RPI_WIFI_PSK:=""}"
-    : "${RPI_WIFI_COUNTRY:=""}"
+    # Skip if no values are specified
+    [ ! -z "${ssid:-}" ] || return
+    [ ! -z "${psk:-}" ] || return
 
     # Setup wifi if settings were included
-    echo "Setting up WIFI: $RPI_BOOT_PATH/wpa_supplicant.conf"
-    boot-write "$RPI_BOOT_PATH/wpa_supplicant.conf" "$(cat << EOF
+    echo "Setting up WIFI: $path/wpa_supplicant.conf"
+    boot-write "$path/wpa_supplicant.conf" "$(cat << EOF
 ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
 update_config=1
-country=$RPI_WIFI_COUNTRY
-
+country=$country
 network={
-	ssid="$RPI_WIFI_SSID"
-	psk="$RPI_WIFI_PSK"
-	key_mgmt=$RPI_WIFI_TYPE
+	ssid="$ssid"
+	psk="$psk"
+	key_mgmt=$type
 }
 EOF
 )"
@@ -118,11 +106,13 @@ EOF
 setup-boot-image() {
     local boot="$1"
 
+    echo "Updating SD Card boot config: $path"
+
     # Apply overlays from the setup.yaml file
-    #while read json; do 
-    #    setup-boot-overlay "$json"; 
-    #done < <(yq -r -o=json -I0 '.overlays[]' $THIS_DIR/setup.yaml)
-    #
+    while read json; do         
+        setup-boot-overlay "$boot" "$json";
+    done < <(setup-get -o=json -I0 '.boot.overlays[]')
+    
     #while read file; do
     #    local out="$boot/$file"
     #    while read json; do
@@ -131,11 +121,52 @@ setup-boot-image() {
     #done < <(yq -r '.boot | keys[]' $THIS_DIR/setup.yaml)
     #exit 0
 
-    boot-append "$boot/config.txt" "dtoverlay=dwc2"
-    boot-replace "$boot/cmdline.txt" "rootwait" "rootwait modules-load=dwc2,g_ether"
-    boot-write "$boot/ssh.txt" ""
+    #boot-append "$boot/config.txt" "dtoverlay=dwc2"
+    #boot-replace "$boot/cmdline.txt" "rootwait" "rootwait modules-load=dwc2,g_ether"
+    #boot-write "$boot/ssh.txt" ""
 
     
+}
+
+setup-boot-overlay() {
+    local boot="${1:-"$(help && exit 1)"}"
+    local json="${2:-"{}"}"
+    local file="$(echo "$json" | yq -r '.file')"
+    local test="$(echo "$json" | yq -r '.test')"
+    local data="$(echo "$json" | yq -r '.data')"
+    local config="$(echo "$json" | yq -r '. | del(.file, .test)')"
+    local append="$(echo "$json" | yq -r '.append')"
+    local replace="$(echo "$json" | yq -r '.replace')"
+    local exists="$(echo "$json" | yq -r '.exists')"
+    
+    # Check if there is a test for this overlay
+    if [ -f "$boot/$file" ] && [ ! -z "${test:-}" ] && grep -E "$test" "$boot/$file" > /dev/null; then
+        printf " ✓ %s ~ %s \n" "$boot/$file" "$test"
+        return # Test passed, up to date
+    fi
+
+    if [ "${append:-"null"}" != "null" ]; then
+        grep "$append" "$boot/$file" > /dev/null 2>&1 && return || true
+        printf " + %s << %s \n" "$boot/$file" "$append"
+        boot-append "$boot/$file" "$append"
+        return
+    fi
+
+    if [ "${replace:-"null"}" != "null" ]; then
+        grep "${data:-}" "$boot/$file" > /dev/null 2>&1 && return || true
+        printf " + %s < ['%s'='%s']\n" "$boot/$file" "$replace" "$data"
+        boot-replace "$boot/$file" "$replace" "$data"
+        return
+    fi
+
+    # Write raw data if no other actions applied
+    if [ ! -z "$(echo "$json" | yq -r '. | keys' | grep "data")" ]; then
+        printf " ± %s < %s\n" "$boot/$file" "data..."
+        echo "${data:-}" > "$boot/$file"
+        return
+    fi
+
+    throw " ? $file < $config\n"
 }
 
 setup-boot-file() {
@@ -143,13 +174,6 @@ setup-boot-file() {
     local out="${2:-"$RPI_BOOT_PATH/$(basename $path)"}"
     echo " + $out"
     cat "$path" | envsubst > "$out"
-}
-
-setup-boot-overlay() {
-    local json="$1"
-
-    # yq -r -o=json -I0 '.overlays[]' setup.yaml
-    echo " ± $json"
 }
 
 download-image() {
