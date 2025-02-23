@@ -8,13 +8,17 @@ set -euo pipefail # Stop running the script on first error...
 
 # Check if the script should run...
 [ ! "$LAST_USER" == "" ] || exit 0
-[ ! "$USER_PASS" == "" ] || exit 0
 
 # Change the password of the last user
-echo "$LAST_USER:$USER_PASS" | chpasswd -e
+if [ ! -z "${USER_PASS:-}" ]; then
+    echo "Setting new password..."
+    echo "$LAST_USER:$(echo $USER_PASS | openssl passwd -6 -stdin)" | chpasswd -e
+fi
 
 # Change the username if its changed
 if [ "$LAST_USER" != "$USER_NAME" ]; then
+    echo "Changing username from '$LAST_USER' to  '$USER_NAME'..."
+
     usermod -l "$USER_NAME" "$LAST_USER"
     usermod -m -d "/home/$USER_NAME" "$USER_NAME"
     groupmod -n "$USER_NAME" "$LAST_USER"

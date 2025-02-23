@@ -8,6 +8,7 @@ set -euo pipefail # Stop running the script on first error...
 
 # Set Timezone (if specified)
 if [ ! -z "${LOCALE_TZ:-}" ]; then
+    echo "Setting Timezone: $LOCALE_TZ"
     rm -f /etc/localtime
     echo "$LOCALE_TZ" >/etc/timezone
     dpkg-reconfigure -f noninteractive tzdata
@@ -15,7 +16,7 @@ fi
 
 # Change keyboard layout (if specified)
 if [ ! "${KEYBOARD_LAYOUT:-}" == "" ] && [ ! "${KEYBOARD_MODEL:-}" == "" ]; then
-    # Set Keyboard layout
+    echo "Set Keyboard layout: $KEYBOARD_LAYOUT ($KEYBOARD_MODEL)"
     cat >/etc/default/keyboard <<'KBEOF'
 XKBMODEL="$LOCALE_KEYBOARD_MODEL"
 XKBLAYOUT="$LOCALE_KEYBOARD_LAYOUT"

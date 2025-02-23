@@ -5,12 +5,11 @@ image:
 
 # Configure networking and how to connect to the device
 admin:
-  user: admin
+  user: pi
   pass: # <-- Desired SSH password
 network:
-  hostname: pizero
-  ssh:
-    enabled: true
+  hostname: zero
+  ssh: { enabled: true }
   wifi:
     country: BE
     type: WPA-PSK
@@ -25,12 +24,12 @@ boot:
   cmdline.txt:
     modules-load: [dwc2, g_ether]
     # cfg80211.ieee80211_regdom=BE systemd.run=/boot/firstrun.sh systemd.run_success_action=reboot systemd.unit=kernel-command-line.target
-    cfg80211:
-      ieee80211_regdom: BE
+    #cfg80211:
+    #  ieee80211_regdom: BE
     systemd:
       run: /boot/firstrun.sh
-      unit: kernel-command-line.target
       run_success_action: reboot
+      unit: kernel-command-line.target
 
 # --------------------------------------------------
 # TODO: Support generic first boot overlays

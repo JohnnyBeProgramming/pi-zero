@@ -12,6 +12,11 @@ set -euo pipefail # Stop running the script on first error...
 [ ! "${WIFI_SSID:-}" == "" ] || exit 0
 [ ! "${WIFI_PSK:-}" == "" ] || exit 0
 
+echo "Configuring wifi settings:"
+echo " - Country: $WIFI_COUNTRY"
+echo " - SSID: $WIFI_SSID"
+
+
 # Create the wifi configuration (if provided)
 cat >/etc/wpa_supplicant/wpa_supplicant.conf <<'WPAEOF'
 country=$WIFI_COUNTRY
@@ -23,7 +28,6 @@ network={
 	ssid="$WIFI_SSID"
 	psk=$WIFI_PSK
 }
-
 WPAEOF
 
 # Apply wifi settings
