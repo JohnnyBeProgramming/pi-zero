@@ -8,6 +8,7 @@ set -euo pipefail # Stop running the script on first error...
 # Check if th script should run
 [ ! "${USER_NAME:-}" == "" ] || exit 0
 [ ! "${USER_HOME:-}" == "" ] || exit 0
+[ ! "${SSH_ENABLE:-false}" == "true" ] || exit 0
 
 # Enable ssh
 systemctl enable ssh

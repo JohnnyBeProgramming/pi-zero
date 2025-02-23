@@ -71,6 +71,9 @@ setup-boot() {
     
     setup-boot-image "$path"
     
+    # Generate setup configurations
+    setup-boot-settings "$path"
+    
     # Notify user to unmount and add SD card
     echo "You can now unmount the SD card and add to the pi device"
 }
@@ -87,22 +90,157 @@ setup-boot-image() {
         cp -rf "$boot_files/" "$path"
     fi
 
+    # Apply boot file modifications
+    while read ident; do
+        local json="$(yq -o=json -I0 ".boot[\"$ident\"]" setup.yaml)"
+        case ${ident:-""} in
+            overlays) true;;
+            config.txt) setup-boot-config "$ident" "$json";;
+            cmdline.txt) setup-boot-cmdline "$ident" "$json";;
+            *) setup-boot-file-overlay "$ident" "$json";;
+        esac
+    done < <(yq '.boot | keys[]' setup.yaml)    
+
     # Apply overlays from the setup.yaml file(s)
     while read json; do         
         setup-boot-overlay "$boot" "$json";
     done < <(setup-get -o=json -I0 '.boot.overlays[]')
-    
-    #while read file; do
-    #    local out="$boot/$file"
-    #    while read json; do
-    #        echo " + $out < $json"
-    #    done < <(yq -r -o=json -I0 ".boot[\"${file}\"][]" setup.yaml)
-    #done < <(yq -r '.boot | keys[]' $THIS_DIR/setup.yaml)
-    #exit 0
+     
+}
 
-    #boot-append "$boot/config.txt" "dtoverlay=dwc2"
-    #boot-replace "$boot/cmdline.txt" "rootwait" "rootwait modules-load=dwc2,g_ether"
-    #boot-write "$boot/ssh.txt" ""    
+setup-boot-config() {
+    local file="$1"
+    local json="$2"
+    local type="$(echo "$json" | yq '. | tag')"
+    case ${type:-""} in
+        !!map) 
+            # File is expressed as a key vaulue map
+            echo " + $file < [$type]"
+            while read json; do
+                local key="$(echo "$json" | yq -r '.key')"
+                local val="$(echo "$json" | yq -r '.value')"
+                case ${key:-""} in
+                    *) 
+                        # Change config value
+                        echo "    + $key: $val"
+                        boot-append "$boot/$file" "$key=$val"
+                    ;;
+                esac
+            done < <(echo $json | yq -oj -I0 '. | to_entries[]' )
+        ;;
+        *) throw "[$type] Unknown input: $json";;
+    esac
+}
+
+setup-boot-cmdline() {
+    local file="$1"
+    local json="$2"
+    local type="$(echo "$json" | yq '. | tag')"
+    case ${type:-""} in
+        !!map) 
+            # Write string output to file
+            echo " + $file < [$type]"
+            while read json; do
+                setup-boot-cmdline-item "$json" 
+            done < <(echo $json | yq -oj -I0 '. | to_entries[]' )
+        ;;
+        *) throw "[$type] Unknown input: $json";;
+    esac
+}
+
+setup-boot-cmdline-item() {
+    local json="$1"
+    local key="$(echo "$json" | yq -r '.key')"
+    local val="$(echo "$json" | yq -oj -I0 '.value')"
+    local type="$(echo "$val" | yq '. | tag')"
+    local data=""
+    case ${type:-""} in
+        !!str) 
+            # Use string value as is
+            data="$(echo "$val" | yq -r '.')"
+            setup-boot-cmdline-item-apply "$key" "$data"
+        ;;
+        !!seq) 
+            # Merge list as comma separated
+            data="$(echo "$val" | yq -P '. | join(",")')"
+            setup-boot-cmdline-item-apply "$key" "$data"
+        ;;
+        !!map) 
+            # Merge map into key value pairs
+            while read json; do
+                local prop="$(echo $json | yq '.key')"
+                local val="$(echo $json | yq '.value')"
+                setup-boot-cmdline-item-apply "$prop" "$val"
+            done < <(echo "{ "$key": $val }" | yq -oj -I0 '
+                .. 
+                | select(. == "*") 
+                | {
+                    (path | . as $x | (.[] | select((. | tag) == "!!int") |= (["[", ., "]"] | join(""))) | $x | join(".") | sub(".\[", "[")): .
+                  } 
+                | to_entries[]
+            ')
+        ;;
+        *) throw "[$type] Unknown input: $json";;
+    esac
+}
+
+setup-boot-cmdline-item-apply() {
+    local key="$1"
+    local data="$2"
+
+    echo "    + $key=$data"
+
+    # Handle edhe cases
+    case ${key:-""} in
+        modules-load) 
+            boot-replace "$boot/$file" "rootwait" "rootwait $key=$data";; 
+        *)  boot-replace "$boot/$file" "\$" " $key=$data";;
+    esac
+}
+
+setup-boot-file-overlay() {
+    local file="$1"
+    local json="$2"
+    local type="$(echo "$json" | yq '. | tag')"
+    case ${type:-""} in
+        !!str) 
+            # Write string output to file
+            echo " + $file < [$type]"
+            echo "$(echo "$json" | yq -r)" > "$boot/$file"
+        ;;
+        *) throw "[$type] Unknown input: $json";;
+    esac
+}
+
+setup-boot-settings() {
+    local boot="$1"
+    local config="$boot/setup.env"
+
+    echo "Creating boot config: $config"
+    echo "" > "$config"
+
+    # Root user name and password
+    cat << EOF >> "$config"
+export USER_NAME=${USER_NAME:-"$(setup-get '.admin.user')"}
+export USER_PASS=${USER_PASS:-"$(setup-get '.admin.pass')"}
+EOF
+
+    # Locale and keyboard layout
+    cat << EOF >> "$config"
+export LOCALE_TZ="${LOCALE_TZ:-}"
+export KEYBOARD_LAYOUT="${KEYBOARD_LAYOUT:-}"
+export KEYBOARD_MODEL="${KEYBOARD_MODEL:-}"
+EOF
+
+    # Network settings
+    cat << EOF >> "$config"
+export DESIRED_HOSTNAME="$(setup-get '.network.hostname')"
+export SSH_ENABLE="$(setup-get '.network.ssh.enabled')"
+export WIFI_COUNTRY="${WIFI_COUNTRY:-"$(setup-get '.network.wifi.country')"}"
+export WIFI_SSID="${WIFI_SSID:-"$(setup-get '.network.wifi.ssid')"}"
+export WIFI_PSK="${WIFI_PSK:-"$(setup-get '.network.wifi.psk')"}"
+EOF
+
 }
 
 setup-boot-overlay() {
