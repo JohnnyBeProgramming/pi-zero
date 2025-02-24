@@ -18,7 +18,7 @@ echo " - SSID: $WIFI_SSID"
 
 
 # Create the wifi configuration (if provided)
-cat >/etc/wpa_supplicant/wpa_supplicant.conf <<'WPAEOF'
+cat << WPAEOF > /etc/wpa_supplicant/wpa_supplicant.conf
 country=$WIFI_COUNTRY
 ctrl_interface=$WIFI_INTERFACE
 ap_scan=1
