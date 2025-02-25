@@ -6,15 +6,15 @@ image:
 # Configure networking and how to connect to the device
 admin:
   user: pi
-  pass: # <-- Desired SSH password
+  pass: $USER_PASS # <-- Desired SSH password
 network:
   hostname: zero
   ssh: { enabled: true }
   wifi:
-    country: BE
     type: WPA-PSK
-    ssid: # <-- WiFi SSID
-    psk: # <-- WPA/WPA2 passphrase
+    ssid: $WIFI_SSID  # <-- WiFi SSID
+    psk: $WIFI_PSK    # <-- WPA/WPA2 passphrase
+    country: $WIFI_COUNTRY
 
 # Setup boot image
 boot:

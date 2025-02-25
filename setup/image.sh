@@ -28,7 +28,7 @@ help() {
 
 config() {
     # Set the core installation config settings
-    ACTION=${1:-}
+    ACTION=${1:-}; shift # past the first arg
     
     # Action is required
     [ ! -z "${ACTION:-}" ] || (help && exit 1)
@@ -38,8 +38,7 @@ main() {
     # Setup basic config and check for an active internet connection
     config $@
     
-    # Configure volume
-    shift # past the first arg
+    # Configure volume    
     case ${ACTION:-} in
         list)
             # List external volumes that are attacked
