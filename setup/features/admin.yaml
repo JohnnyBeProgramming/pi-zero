@@ -1,0 +1,2 @@
+user: pi
+pass: $USER_PASS # <-- Desired SSH password from ENV var

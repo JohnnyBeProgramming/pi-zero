@@ -1,0 +1,2 @@
+network:
+  ssh: { enabled: true }

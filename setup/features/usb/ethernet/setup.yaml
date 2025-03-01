@@ -1,0 +1,7 @@
+
+# Setup boot image
+boot:
+  config.txt:
+    dtoverlay: dwc2
+  cmdline.txt:
+    modules-load: [dwc2, g_ether]

@@ -1,19 +1,30 @@
-# Specify the OS base image to copy to SD card
-image:
+image: # Specify the OS base image to copy to SD card
   url: https://downloads.raspberrypi.org/raspbian_lite_latest
   file: ./images/current.img
 
+# TODO: Import features from files...  
+includes:
+  admin: ./setup/admin.yaml
+  network:
+    ssh: ./setup/network/ssh
+    wifi: ./setup/network/wifi
+  usb: # Enable USB features
+    ethernet: ./setup/features/usb/ethernet
+    volumes: ./setup/features/usb/volumes
+  nodejs: ./setup/features/node
+  golang: ./setup/features/golang
+  python: ./setup/features/python3
+  rust: ./setup/features/rust
+
 # Configure networking and how to connect to the device
-admin:
-  user: pi
-  pass: $USER_PASS # <-- Desired SSH password
+admin: { user: pi, pass: $USER_PASS } # <-- Desired SSH password
 network:
   hostname: zero
   ssh: { enabled: true }
   wifi:
     type: WPA-PSK
-    ssid: $WIFI_SSID  # <-- WiFi SSID
-    psk: $WIFI_PSK    # <-- WPA/WPA2 passphrase
+    ssid: $WIFI_SSID # <-- WiFi SSID
+    psk: $WIFI_PSK # <-- WPA/WPA2 passphrase
     country: $WIFI_COUNTRY
 
 # Setup boot image
@@ -24,8 +35,6 @@ boot:
   cmdline.txt:
     modules-load: [dwc2, g_ether]
     # cfg80211.ieee80211_regdom=BE systemd.run=/boot/firstrun.sh systemd.run_success_action=reboot systemd.unit=kernel-command-line.target
-    #cfg80211:
-    #  ieee80211_regdom: BE
     systemd:
       run: /boot/firstrun.sh
       run_success_action: reboot
@@ -37,8 +46,3 @@ boot:
 volumes:
   /apps: {}
   /data: {}
-packages:
-  go: ^1.21.4
-  node: true
-  python3: true
-  rust: true
