@@ -10,7 +10,7 @@ includes:
     wifi: ./setup/network/wifi
   usb: # Enable USB features
     ethernet: ./setup/features/usb/ethernet
-    volumes: ./setup/features/usb/volumes
+    volumes: ./setup/featsetup.yamlures/usb/volumes
   nodejs: ./setup/features/node
   golang: ./setup/features/golang
   python: ./setup/features/python3
