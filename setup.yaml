@@ -9,12 +9,12 @@ includes:
     ssh: ./setup/network/ssh
     wifi: ./setup/network/wifi
   usb: # Enable USB features
-    ethernet: ./setup/features/usb/ethernet
-    volumes: ./setup/featsetup.yamlures/usb/volumes
-  nodejs: ./setup/features/node
-  golang: ./setup/features/golang
-  python: ./setup/features/python3
-  rust: ./setup/features/rust
+    ethernet: ./setup/config/usb/ethernet
+    volumes: ./setup/config/usb/volumes
+  nodejs: ./setup/config/node
+  golang: ./setup/config/golang
+  python: ./setup/config/python3
+  rust: ./setup/config/rust
 
 # Configure networking and how to connect to the device
 admin: { user: pi, pass: $USER_PASS } # <-- Desired SSH password
