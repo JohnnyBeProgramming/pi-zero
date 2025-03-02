@@ -34,7 +34,8 @@ boot:
     dtoverlay: dwc2
   cmdline.txt:
     modules-load: [dwc2, g_ether]
-    # cfg80211.ieee80211_regdom=BE systemd.run=/boot/firstrun.sh systemd.run_success_action=reboot systemd.unit=kernel-command-line.target
+    #cfg80211.ieee80211_regdom: BE
+    net.ifnames: '0'
     systemd:
       run: /boot/firstrun.sh
       run_success_action: reboot
