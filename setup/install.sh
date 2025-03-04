@@ -12,55 +12,80 @@ set -euo pipefail # Stop running the script on first error...
 # --------------------------------------------------------------
 
 config() {
-    # Set the core installation config settings
-    APP_BOOT="/boot"                # Default location to look for installation files
-    APP_USER=${APP_USER:-$USER}     # The user associated with the system process
-    APP_REPO="https://github.com/JohnnyBeProgramming/pi-zero.git"
-    
-    if [ -f "${BASH_SOURCE:-}" ]; then
-        # Resolve the current script folder
-        THIS_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
-        THIS_FILE=$(basename "${BASH_SOURCE[0]}")
-    else
-        THIS_DIR="$HOME/setup"
-        THIS_FILE="run.sh"
-    fi
+    colors
+
+    # Resolve the current script folder
+    THIS_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+    THIS_FILE=$(basename "${BASH_SOURCE[0]}")
+
+    # Load setup config values (if exists)
+    [ ! -f "$THIS_DIR/setup.env" ] || source "$THIS_DIR/setup.env"
+
+    export DEBIAN_FRONTEND=noninteractive
 }
 
 main() {
     # Setup basic config and check for an active internet connection
-    config $@
-    colors
+    config $@    
     check-deps
     
     # Install and upgrade specified packages and services
     update-os
-    install-packages
-    install-services
+    install
 }
 
 check-deps() {
     # Do some pre-checks to ensure we have internet and a valid architecture
-    check-arch || fail "Architecture $OSTYPE ($(uname -m)) not supported"
-    check-setup-media || fail "Setup failed to find installation media in:\n - $THIS_DIR"    
-}
-
-check-arch() {
+    
     # Make sure we are running debian
-    [ -f "/etc/debian_version" ] || return 1
-}
-
-check-setup-media() {
-    if [ ! -f "$THIS_DIR/$THIS_FILE" ]
-    then
-        return 1
-    fi
+    [ -f "/etc/debian_version" ] \
+    || fail "Architecture $OSTYPE ($(uname -m)) not supported"
+    
+    # Make sure we can access the setup media
+    [ -d "$THIS_DIR" ] \
+    || fail "Setup failed to find installation media in:\n - $THIS_DIR"    
 }
 
 update-os() {
     # Update system packages
-    sudo apt update
+    sudo apt update -y
     sudo apt full-upgrade -y
+    sudo apt autoremove -y
+}
+
+install() {    
+    install-tools
+    #install-packages
+    #install-services
+}
+
+install-tools() {
+    [ ! -z "${SETUP_TOOLS:-}" ] || return 0
+
+    echo "Installing tools and utilities..."
+    for tool in "${SETUP_TOOLS[@]}"; do
+        # Check if a version was specified
+        local version="" # defaults to
+        if [[ "$tool" =~ "=" ]]; then
+            version=$(echo "$tool" | cut -d '=' -f2)
+            tool=$(echo "$tool" | cut -d '=' -f1)
+        fi
+
+        # Skip if tool is already installed
+        if which $tool > /dev/null; then
+            continue
+        fi
+
+        # Install the specified tool
+        echo " - $tool $([ -z "${version:-}" ] || echo "($version)")"
+        if [ -f "$THIS_DIR/tools/$tool.sh" ]; then
+            # Install using a custom script
+            version="${version:-}" "$THIS_DIR/tools/$tool.sh"
+        else
+            # Use the default package manager
+            sudo apt-get install $tool -y
+        fi
+    done
 }
 
 install-packages() {

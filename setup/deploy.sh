@@ -28,8 +28,7 @@ main() {
     config $@
     
     # Configure volume
-    echo "Copying setup files to $TARGET_HOST"
-    printf "${dim:-}"
+    printf "Copying setup files to $TARGET_HOST\n${dim:-}"
     tar zcf - ./setup | ssh $TARGET_HOST "tar zxf - ./setup && ./setup/install.sh"
     printf "${reset:-}"
 }
