@@ -47,10 +47,18 @@ check-deps() {
 }
 
 update-os() {
-    # Update system packages
-    sudo apt update -y
-    sudo apt full-upgrade -y
-    sudo apt autoremove -y
+    local last_updated="$THIS_DIR/.last_updated"
+
+    # Update only once a day
+    if [ ! -f "$last_updated" ] || [ "$(date '+%Y-%m-%d')" != "$(cat "$last_updated")" ]; then
+        # Update system packages
+        sudo apt update -y
+        sudo apt full-upgrade -y
+        sudo apt autoremove -y
+
+        # Track last successfull update
+        date '+%Y-%m-%d' > "$last_updated"
+    fi
 }
 
 install() {    

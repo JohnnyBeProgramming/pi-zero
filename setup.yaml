@@ -1,8 +1,56 @@
-image: # Specify the OS base image to copy to SD card
+# --------------------------------------------------------
+# Specify the OS base image to copy to SD card
+# --------------------------------------------------------
+image: 
   url: https://downloads.raspberrypi.org/raspbian_lite_latest
   file: ./images/current.img
 
+# --------------------------------------------------------
+# Configure networking and user to connect to the device
+# --------------------------------------------------------
+admin: { user: pi, pass: $SETUP_ADMIN_PASS } # <-- Desired SSH password
+network:
+  hostname: zero
+  ssh: { enabled: true }
+  wifi:
+    type: WPA-PSK
+    ssid: $SETUP_NETWORK_WIFI_WIFI_SSID   # <-- [secrets] WiFi SSID stored in '.env'
+    psk: $SETUP_NETWORK_WIFI_WIFI_PSK     # <-- [secrets] Passphrase secret stored in '.env'
+    country: $SETUP_LOCALE_COUNTRY        # <-- [default] Use locale default
+
+# --------------------------------------------------------
+# Install tools and utilities
+# --------------------------------------------------------
+tools:
+  git: true           # Install git to pull remote code repositories  
+  #python3: 3.11.5    # Install dev package: python
+  #node: 23.3.0       # Install dev package: NodeJS
+  #go: true           # Install dev package: golang
+  #rust: true         # Install dev package: rust
+  #nginx: true        # Install a web server
+
+# --------------------------------------------------
+# TODO: Support volumes or additional folders
+# --------------------------------------------------
+volumes:
+  /setup: {}
+  /apps: {}
+  /data: {}
+
+# --------------------------------------------------------
+# Additional settings using system defaults
+# --------------------------------------------------------
+# Configure locale and keyboard settings
+locale:
+  country: $SETUP_LOCALE_COUNTRY
+  timezone: $SETUP_LOCALE_TIMEZONE
+  keyboard:
+    layout: $SETUP_KEYBOARD_LAYOUT
+    model: $SETUP_KEYBOARD_MODEL
+
+# --------------------------------------------------------
 # TODO: Import features from files...  
+# --------------------------------------------------------
 includes:
   admin: ./setup/admin.yaml
   network:
@@ -15,18 +63,7 @@ includes:
   golang: ./setup/config/golang
   python: ./setup/config/python3
   rust: ./setup/config/rust
-
-# Configure networking and how to connect to the device
-admin: { user: pi, pass: $USER_PASS } # <-- Desired SSH password
-network:
-  hostname: zero
-  ssh: { enabled: true }
-  wifi:
-    type: WPA-PSK
-    ssid: $WIFI_SSID # <-- WiFi SSID
-    psk: $WIFI_PSK # <-- WPA/WPA2 passphrase
-    country: $WIFI_COUNTRY
-
+  
 # Setup boot image
 boot:
   ssh.txt: ""
@@ -34,29 +71,8 @@ boot:
     dtoverlay: dwc2
   cmdline.txt:
     modules-load: [dwc2, g_ether]
-    #cfg80211.ieee80211_regdom: BE
     net.ifnames: '0'
     systemd:
       run: /boot/firstrun.sh
       run_success_action: reboot
       unit: kernel-command-line.target
-
-# --------------------------------------------------
-# TODO: Support generic first boot overlays
-# --------------------------------------------------
-tools:
-  # Install core packages
-  git: true
-
-  # Development tools
-  #python3: 3.11.5
-  #node: 23.3.0
-  #go: true
-  #rust: true
-
-  # Additional packages
-  #nginx: true
-
-volumes:
-  /apps: {}
-  /data: {}

@@ -19,7 +19,7 @@ Actions:
   boot <volume-boot-path>
 
 Disk Mounts:
-$(diskutil list | grep "(external, physical)" | awk '{print $1}' | sed 's|^| - |')
+$(list-drives)
 
 Volume Boot Path:
  - This is the mounted path to the boot drive
@@ -28,17 +28,19 @@ Volume Boot Path:
 EOF
 }
 
+config() {
+    [ ! -f .env ] || source .env # Load untracked secrets
+}
+
 main() {
     ACTION=${1:-}; [ -z "${1:-}" ] || shift;
-
-    [ ! -f .env ] || source .env # Load untracked secrets
-
     case ${ACTION:-""} in
         image) 
             setup-image $@
             [ -z "${2:-}" ] || setup-boot "${2:-}"
             ;;
-        boot) setup-boot $@;;
+        boot) 
+            setup-boot $@;;
         *) help && exit 1
     esac    
 }
@@ -214,31 +216,43 @@ setup-boot-file-overlay() {
 
 setup-boot-settings() {
     local boot="$1"
-    local config="$boot/setup.env"
+    local config="$boot/volumes/setup.env"
 
-    echo "Creating boot config: $config"
+    echo "Creating setup config: $config"
+    mkdir -p "$(dirname $config)"
     echo "" > "$config"
 
     # Root user name and password
     cat << EOF >> "$config"
-export USER_NAME=${USER_NAME:-"$(setup-get '.admin.user')"}
-export USER_PASS=${USER_PASS:-"$(setup-get '.admin.pass')"}
+SETUP_ADMIN_USER="$(setup-get '.admin.user')"
+SETUP_ADMIN_PASS="$(setup-get '.admin.pass')"
 EOF
 
     # Locale and keyboard layout
     cat << EOF >> "$config"
-export LOCALE_TZ="${LOCALE_TZ:-}"
-export KEYBOARD_LAYOUT="${KEYBOARD_LAYOUT:-}"
-export KEYBOARD_MODEL="${KEYBOARD_MODEL:-}"
+SETUP_LOCALE_TIMEZONE="${SETUP_LOCALE_TIMEZONE:-}"
+SETUP_KEYBOARD_LAYOUT="${SETUP_KEYBOARD_LAYOUT:-}"
+SETUP_KEYBOARD_MODEL="${SETUP_KEYBOARD_MODEL:-}"
 EOF
 
     # Network settings
     cat << EOF >> "$config"
-export DESIRED_HOSTNAME="$(setup-get '.network.hostname')"
-export SSH_ENABLE="$(setup-get '.network.ssh.enabled')"
-export WIFI_COUNTRY="${WIFI_COUNTRY:-"$(setup-get '.network.wifi.country')"}"
-export WIFI_SSID="${WIFI_SSID:-"$(setup-get '.network.wifi.ssid')"}"
-export WIFI_PSK="${WIFI_PSK:-"$(setup-get '.network.wifi.psk')"}"
+DESIRED_HOSTNAME="$(setup-get '.network.hostname')"
+SSH_ENABLE="$(setup-get '.network.ssh.enabled')"
+WIFI_COUNTRY="${WIFI_COUNTRY:-"$(setup-get '.network.wifi.country')"}"
+WIFI_SSID="${WIFI_SSID:-"$(setup-get '.network.wifi.ssid')"}"
+WIFI_PSK="${WIFI_PSK:-"$(setup-get '.network.wifi.psk')"}"
+EOF
+
+    # Track the tools and services that we want to install on first boot
+    SETUP_TOOLS=("git" "node")
+    SETUP_SERVICES=()
+    cat << EOF >> "$config"
+# Setup additional tools
+SETUP_TOOLS=(${SETUP_TOOLS[@]})
+
+# Install system services
+SETUP_SERVICES=(${SETUP_SERVICES[@]})
 EOF
 
 }
@@ -339,6 +353,10 @@ boot-write() {
     local data=$2
     mkdir -p "$(dirname "$file")"
     echo "$data" > "$file"
+}
+
+list-drives() {
+    diskutil list | grep "(external, physical)" | awk '{print $1}' | sed 's|^| - |' || true
 }
 
 throw() {
