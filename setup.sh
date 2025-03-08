@@ -29,10 +29,12 @@ EOF
 }
 
 config() {
-    [ ! -f .env ] || source .env # Load untracked secrets
+    [ ! -f .env ] || export $(xargs < .env) # Load untracked secrets
 }
 
 main() {
+    config 
+
     ACTION=${1:-}; [ -z "${1:-}" ] || shift;
     case ${ACTION:-""} in
         image) 
@@ -220,39 +222,40 @@ setup-boot-settings() {
 
     echo "Creating setup config: $config"
     mkdir -p "$(dirname $config)"
-    echo "" > "$config"
+    echo "# Auto generated settings" > "$config"
 
-    # Root user name and password
-    cat << EOF >> "$config"
-SETUP_ADMIN_USER="$(setup-get '.admin.user')"
-SETUP_ADMIN_PASS="$(setup-get '.admin.pass')"
-EOF
-
-    # Locale and keyboard layout
-    cat << EOF >> "$config"
-SETUP_LOCALE_TIMEZONE="${SETUP_LOCALE_TIMEZONE:-}"
-SETUP_KEYBOARD_LAYOUT="${SETUP_KEYBOARD_LAYOUT:-}"
-SETUP_KEYBOARD_MODEL="${SETUP_KEYBOARD_MODEL:-}"
-EOF
-
-    # Network settings
-    cat << EOF >> "$config"
-DESIRED_HOSTNAME="$(setup-get '.network.hostname')"
-SSH_ENABLE="$(setup-get '.network.ssh.enabled')"
-WIFI_COUNTRY="${WIFI_COUNTRY:-"$(setup-get '.network.wifi.country')"}"
-WIFI_SSID="${WIFI_SSID:-"$(setup-get '.network.wifi.ssid')"}"
-WIFI_PSK="${WIFI_PSK:-"$(setup-get '.network.wifi.psk')"}"
-EOF
+    # Convert the setup YAML to to ENV compatable vars 
+    yq -P '
+        . | del(.includes,.boot) | 
+        .. | select(. == "*") | [
+            "SETUP_" + (path | join("_") | upcase) + "=" + (. | to_json)
+        ] | join("")' setup.yaml \
+    | envsubst \
+    | grep -v -e '^$' \
+    >> "$config"
 
     # Track the tools and services that we want to install on first boot
-    SETUP_TOOLS=("git" "node")
+    SETUP_TOOLS=()    
+    while read tool; do         
+        SETUP_TOOLS+=("$tool")
+    done < <(yq -P '.tools | to_entries[] | select(.value != false) | (
+        .key + "=" + .value | sub("=true"; "")
+    )' setup.yaml)
+
     SETUP_SERVICES=()
+    while read service; do 
+        SETUP_SERVICES+=("$service")
+    done < <(yq -oj -I0 '.services | to_entries[] | select(.value != false) | (
+        .key
+    )' setup.yaml)
+
     cat << EOF >> "$config"
+
 # Setup additional tools
-SETUP_TOOLS=(${SETUP_TOOLS[@]})
+SETUP_TOOLS=(${SETUP_TOOLS[@]:-})
 
 # Install system services
-SETUP_SERVICES=(${SETUP_SERVICES[@]})
+SETUP_SERVICES=(${SETUP_SERVICES[@]:-})
 EOF
 
 }

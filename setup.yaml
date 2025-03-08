@@ -14,20 +14,24 @@ network:
   ssh: { enabled: true }
   wifi:
     type: WPA-PSK
-    ssid: $SETUP_NETWORK_WIFI_WIFI_SSID   # <-- [secrets] WiFi SSID stored in '.env'
-    psk: $SETUP_NETWORK_WIFI_WIFI_PSK     # <-- [secrets] Passphrase secret stored in '.env'
-    country: $SETUP_LOCALE_COUNTRY        # <-- [default] Use locale default
+    ssid: $SETUP_NETWORK_WIFI_SSID   # <-- [secrets] WiFi SSID stored in '.env'
+    psk: $SETUP_NETWORK_WIFI_PSK     # <-- [secrets] Passphrase secret stored in '.env'
+    country: $SETUP_LOCALE_COUNTRY   # <-- [default] Use locale default
 
 # --------------------------------------------------------
 # Install tools and utilities
 # --------------------------------------------------------
 tools:
   git: true           # Install git to pull remote code repositories  
+  go: true            # Install dev package: golang
   #python3: 3.11.5    # Install dev package: python
-  #node: 23.3.0       # Install dev package: NodeJS
-  #go: true           # Install dev package: golang
-  #rust: true         # Install dev package: rust
-  #nginx: true        # Install a web server
+  node: 23.3.0       # Install dev package: NodeJS
+  rust: false         # Install dev package: rust
+  nginx: false        # Install a web server
+
+#services:
+#  xxx: true
+#  yyy: aaaaa
 
 # --------------------------------------------------
 # TODO: Support volumes or additional folders

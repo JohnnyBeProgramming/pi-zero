@@ -94,6 +94,7 @@ install-tools() {
             sudo apt-get install $tool -y
         fi
     done
+    echo "Tools installed."
 }
 
 install-packages() {
