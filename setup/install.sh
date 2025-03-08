@@ -65,6 +65,7 @@ install() {
     install-tools
     #install-packages
     #install-services
+    install-features
 }
 
 install-tools() {
@@ -177,7 +178,24 @@ upgrade-package() {
     printf "${reset}"
 }
 
-install-services() {
+install-features() {
+    [ ! -z "${SETUP_TOOLS:-}" ] || return 0
+
+    echo "Installing system services..."
+    for service in "${SETUP_SERVICES[@]}"; do
+        local path="$THIS_DIR/$service"
+        if [ ! -d "$path" ]; then
+            echo "Warning: Path not found: $path"
+            continue
+        fi
+
+        # Look for setup
+        [ ! -f "$path/setup.sh" ] || "$path/setup.sh"
+    done
+    echo "Features installed."
+}
+
+install-services-old() {
     local config="$THIS_DIR/services.ini"
     local services="$THIS_DIR/services"
     if [ -f "$config" ]; then
