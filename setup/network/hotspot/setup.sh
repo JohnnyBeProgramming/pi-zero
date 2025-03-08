@@ -12,13 +12,10 @@ THIS_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 setup() {
     config $@
     
-    # Load common setup functions
-    source "$THIS_DIR/../utils.sh"
-    
     # Install any dependencies used by this service (if not already installed)
     #install-dependencies dnsmasq hostapd iptables bridge-utils ethtool
     sudo apt install -y dnsmasq hostapd iptables
-    upgrade
+    #upgrade
     
     # Recreate the service manifest and update to latest
     #install-service $SETUP_NAME "$HOME/.hotspot"
@@ -47,7 +44,6 @@ upgrade() {
     # Setup the DHCP server (dnsmaq)
     echo "Configuring dnsmasq: /etc/dnsmasq.conf"
     sudo cp -f "$THIS_DIR/etc/dnsmasq.conf" /etc/dnsmasq.conf
-        
     
     # Have wlan0 forward via Usb/Ethernet cable to your modem.
     if ! cat /etc/sysctl.conf | grep -v '#.*' | grep 'net.ipv4.ip_forward=' > /dev/null; then

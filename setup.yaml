@@ -29,10 +29,6 @@ tools:
   rust: false         # Install dev package: rust
   nginx: false        # Install a web server
 
-#services:
-#  xxx: true
-#  yyy: aaaaa
-
 # --------------------------------------------------
 # TODO: Support volumes or additional folders
 # --------------------------------------------------
@@ -56,10 +52,10 @@ locale:
 # TODO: Import features from files...  
 # --------------------------------------------------------
 includes:
-  admin: ./setup/admin.yaml
-  network:
+  network: 
     ssh: ./setup/network/ssh
     wifi: ./setup/network/wifi
+    hotspot: ./setup/network/hotspot
   usb: # Enable USB features
     ethernet: ./setup/config/usb/ethernet
     volumes: ./setup/config/usb/volumes

@@ -109,7 +109,9 @@ setup-boot-image() {
     while read json; do         
         setup-boot-overlay "$boot" "$json";
     done < <(setup-get -o=json -I0 '.boot.overlays[]')
-     
+
+    # Add the local volumes to includes 
+    setup-volumes "$boot"
 }
 
 setup-boot-config() {
@@ -306,6 +308,32 @@ setup-boot-file() {
     local out="${2:-"$RPI_BOOT_PATH/$(basename $path)"}"
     echo " + $out"
     cat "$path" | envsubst > "$out"
+}
+
+setup-volumes() {
+    local base=$1
+
+    echo "Setting up volumes..."
+    mkdir -p "$base/volumes/"
+    while read json; do
+        local key="$(echo "$json" | yq '.key')"
+        local val="$(echo "$json" | yq '.value')"
+        local path="$THIS_DIR/$(basename $key)"
+        if [ -d "${path}" ]; then
+            setup-volume-archive "$key" "$path" "$base"
+        else
+            echo "Warning: Path '$path' not found"
+        fi
+    done < <(setup-get -o=json -I0 '.volumes' | yq -oj -I0 '. | to_entries[]')
+}
+
+setup-volume-archive() {
+    local target=$1
+    local path=$2
+    local base=$3
+
+    echo " + $target: $path";
+    tar zcf - "$path" > "$base/volumes/$(basename $target).tar.gz"
 }
 
 download-image() {
