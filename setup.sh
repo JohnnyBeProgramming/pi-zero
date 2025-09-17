@@ -23,27 +23,51 @@ $(list-drives)
 
 Volume Boot Path:
  - This is the mounted path to the boot drive
- - Copies and modified the base image with the current setup
+ - Copies a modified base image with the selected setup
  - eg: /Volumes/boot/
 EOF
 }
 
 config() {
     [ ! -f .env ] || export $(xargs < .env) # Load untracked secrets
+
+    # Read the global command line args
+    ACTION=${1:-}; [ -z "${1:-}" ] || shift;
+
+    # Prompt the user for inputs (if not already specified)
+    config-interactive
+}
+
+config-interactive() {
+    : "${ACTION:="$(ask choose --header "Action?" "init" "image" "boot")"}"
+}
+
+ask() {
+    if which gum > /dev/null; then
+        gum $@
+    fi
 }
 
 main() {
     config 
-
-    ACTION=${1:-}; [ -z "${1:-}" ] || shift;
+    
     case ${ACTION:-""} in
+        init) 
+            echo "TODO: Initialis.."
+            ;;
         image) 
+            # Generate the bootable image
             setup-image $@
+
+            # Apply the boot settings (if specified)
             [ -z "${2:-}" ] || setup-boot "${2:-}"
             ;;
         boot) 
+            # Set the boot modifications for SD card on first use
             setup-boot $@;;
-        *) help && exit 1
+        *) 
+            # Command not found, show help
+            help && exit 1
     esac    
 }
 
@@ -387,7 +411,7 @@ boot-write() {
 }
 
 list-drives() {
-    diskutil list | grep "(external, physical)" | awk '{print $1}' | sed 's|^| - |' || true
+    diskutil list | grep "(external, physical)" | awk '{print $1}' | sed 's|^| - |' || echo " - No disks available"
 }
 
 throw() {

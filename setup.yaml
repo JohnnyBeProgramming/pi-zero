@@ -9,6 +9,7 @@ image:
 # Configure networking and user to connect to the device
 # --------------------------------------------------------
 admin: { user: pi, pass: $SETUP_ADMIN_PASS } # <-- Desired SSH password
+
 network:
   hostname: zero
   ssh: { enabled: true }
