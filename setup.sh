@@ -49,11 +49,11 @@ ask() {
 }
 
 main() {
-    config 
+    config $@
     
     case ${ACTION:-""} in
         init) 
-            echo "TODO: Initialis.."
+            setup-init
             ;;
         image) 
             # Generate the bootable image
@@ -69,6 +69,17 @@ main() {
             # Command not found, show help
             help && exit 1
     esac    
+}
+
+setup-init() {
+    SETUP_IMAGE_URL="$(ask input --header="SETUP_IMAGE_URL" --value="${SETUP_IMAGE_URL:-'https://downloads.raspberrypi.org/raspbian_lite_latest'}")"
+    SETUP_ADMIN_USER="$(ask input --header="SETUP_ADMIN_USER" --value="${SETUP_ADMIN_USER:-}")"
+    SETUP_ADMIN_PASS="$(ask input --header="SETUP_ADMIN_PASS" --value="${SETUP_ADMIN_PASS:-}" --password)"
+
+    SETUP_NETWORK_HOSTNAME="$(ask input --header="SETUP_NETWORK_HOSTNAME" --value="${SETUP_NETWORK_HOSTNAME:-}")"
+    SETUP_NETWORK_SSH_ENABLED="$(ask input --header="SETUP_NETWORK_SSH_ENABLED" --value="${SETUP_NETWORK_SSH_ENABLED:-true}")"
+
+    env | grep SETUP_
 }
 
 setup-get() {
