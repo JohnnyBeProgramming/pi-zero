@@ -9,75 +9,86 @@ THIS_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 
 help() { 
     cat << EOF
-Setup a SD Card image for a Raspberry Pi
-
 Basic Usage:
   $0 ACTION [ args ]
 
 Actions:
-  image <disk-mount> [ <volume-boot-path> ]
-  boot <volume-boot-path>
+  image <path-to-image-file>
+  disk <disk-mount>
 
 Disk Mounts:
-$(list-drives)
+$(list-drives | sed 's|^| - |' || echo " - No disks available")
 
-Volume Boot Path:
- - This is the mounted path to the boot drive
- - Copies a modified base image with the selected setup
- - eg: /Volumes/boot/
 EOF
 }
 
-config() {
-    [ ! -f .env ] || export $(xargs < .env) # Load untracked secrets
-
-    # Read the global command line args
+main() {
     ACTION=${1:-}; [ -z "${1:-}" ] || shift;
+    config $@ # <-- Parse the command line args
+    
+    # Process the action that the user specified (if any)
+    case ${ACTION:-""} in
+        init) setup-init;;
+        image)  setup-image $@;; # Download and generate a bootable image
+        disk) setup-disk $@;; # Burn an image to the SD card mounted as a volume
+        boot) setup-boot $@;; # Set the boot modifications for SD card on first use
+        *) # Command not found, show help
+            help && exit 1
+    esac    
+}
 
+config() {
+    [ ! -f .env ] || export $(cat .env | xargs) # Load session variables
+
+    # Parse the command line arguments
+    POSITIONAL=()
+    while [[ $# -gt 0 ]]
+    do
+        case $1 in
+            -h|--help) help && exit 0;;
+            -i|--image) SETUP_IMAGE_FILE="$2" && shift && shift;; # past argument and value
+            --dry-run) DRY_RUN=true && shift;;
+            *) # unknown option
+                POSITIONAL+=("$1") # save it in an array for later
+                shift # past argument
+            ;;
+        esac
+    done
+    # restore positional parameters that could not be matched and parsed
+    set -- "${POSITIONAL[@]:-}"
+    
     # Prompt the user for inputs (if not already specified)
     config-interactive
 }
 
 config-interactive() {
-    : "${ACTION:="$(ask choose --header "Action?" "init" "image" "boot")"}"
+    C_PRIMARY=12
+    F_PRIMARY="gum style --foreground $C_PRIMARY"
+
+    gum style \
+        --border normal \
+        --margin "1" \
+        --padding "1 2" \
+        --border-foreground $C_PRIMARY \
+        "`$F_PRIMARY '📦 Setup'` - Setup a SD Card image for a Raspberry Pi"
+
+    : "${ACTION:="$(cat <<- EOF | gum choose --header="Setup action to perform?" --limit 1
+init
+image
+boot
+EOF
+)"}"
 }
 
-ask() {
-    if which gum > /dev/null; then
-        gum $@
-    fi
-}
 
-main() {
-    config $@
-    
-    case ${ACTION:-""} in
-        init) 
-            setup-init
-            ;;
-        image) 
-            # Generate the bootable image
-            setup-image $@
-
-            # Apply the boot settings (if specified)
-            [ -z "${2:-}" ] || setup-boot "${2:-}"
-            ;;
-        boot) 
-            # Set the boot modifications for SD card on first use
-            setup-boot $@;;
-        *) 
-            # Command not found, show help
-            help && exit 1
-    esac    
-}
 
 setup-init() {
-    SETUP_IMAGE_URL="$(ask input --header="SETUP_IMAGE_URL" --value="${SETUP_IMAGE_URL:-'https://downloads.raspberrypi.org/raspbian_lite_latest'}")"
-    SETUP_ADMIN_USER="$(ask input --header="SETUP_ADMIN_USER" --value="${SETUP_ADMIN_USER:-}")"
-    SETUP_ADMIN_PASS="$(ask input --header="SETUP_ADMIN_PASS" --value="${SETUP_ADMIN_PASS:-}" --password)"
+    SETUP_IMAGE_URL="$(gum input --header="SETUP_IMAGE_URL" --value="${SETUP_IMAGE_URL:-'https://downloads.raspberrypi.org/raspbian_lite_latest'}")"
+    SETUP_ADMIN_USER="$(gum input --header="SETUP_ADMIN_USER" --value="${SETUP_ADMIN_USER:-}")"
+    SETUP_ADMIN_PASS="$(gum input --header="SETUP_ADMIN_PASS" --value="${SETUP_ADMIN_PASS:-}" --password)"
 
-    SETUP_NETWORK_HOSTNAME="$(ask input --header="SETUP_NETWORK_HOSTNAME" --value="${SETUP_NETWORK_HOSTNAME:-}")"
-    SETUP_NETWORK_SSH_ENABLED="$(ask input --header="SETUP_NETWORK_SSH_ENABLED" --value="${SETUP_NETWORK_SSH_ENABLED:-true}")"
+    SETUP_NETWORK_HOSTNAME="$(gum input --header="SETUP_NETWORK_HOSTNAME" --value="${SETUP_NETWORK_HOSTNAME:-}")"
+    SETUP_NETWORK_SSH_ENABLED="$(gum input --header="SETUP_NETWORK_SSH_ENABLED" --value="${SETUP_NETWORK_SSH_ENABLED:-true}")"
 
     env | grep SETUP_
 }
@@ -88,18 +99,39 @@ setup-get() {
 }
 
 setup-image() {
-    # Check for required args
-    local disk=${1:-"$(help && exit 1)"}
-    local url=$(setup-get ".image.url" || echo "https://downloads.raspberrypi.org/raspbian_lite_latest")
-    local file=$(setup-get ".image.file" || echo "./images/$(basename $url).img")
+    # Select the disk image file to use when buring the image
+    : "${SETUP_IMAGE_FILE:=${1:-"$(prompt-image-file)"}}"
 
-    echo "Copying image: $disk < $file = $url"
+    # Mount the image as a volume mount, to expose the boot dir for updates
+    SETUP_MOUNT_OUTPUT="$(hdiutil mount "$SETUP_IMAGE_FILE")"
+    SETUP_MOUNT_DRIVE="$(echo "$SETUP_MOUNT_OUTPUT" | grep FDisk_partition_scheme | xargs | cut -d ' ' -f1)"
+    SETUP_MOUNT_BOOT="$(echo "$SETUP_MOUNT_OUTPUT" | grep Windows_FAT_32 | xargs | cut -d ' ' -f3)"
 
-    # Download the base image (if not available)
-    [ -f "$file" ] || download-image "$url" "$file"
+    # Unmount drive and volume(s) once we are done with this function
+    trap "[ ! -d "$SETUP_MOUNT_DRIVE" ] || hdiutil eject $SETUP_MOUNT_DRIVE" EXIT
 
-    # Burn the base image and add additional config
-    copy-image "$file" "$disk"    
+    # Update the image boot partition with our selected features
+    [ -z "${SETUP_MOUNT_BOOT:-}" ] || setup-boot "$SETUP_MOUNT_BOOT"
+
+    # Check if we should burn the resulting image
+    if gum confirm "Burn to SD Card?"; then
+        # Burn image to SD card
+        setup-disk
+    else
+        # Unmount disk and release sources, as we no longer need it
+        hdiutil eject $SETUP_MOUNT_DRIVE
+    fi
+}
+
+setup-disk() {
+    : "${SETUP_IMAGE_FILE:=${1:-"$(prompt-image-file)"}}"
+    : "${SETUP_VOLUME_MOUNT:=${2:-"$(prompt-volume-mount)"}}"
+
+    [ -d "${SETUP_VOLUME_MOUNT:-}" ] || throw "Unknown volume mount: ${SETUP_VOLUME_MOUNT:-}"
+    
+    # Burn the base image to the SD Card image
+    echo "Copying image: $SETUP_IMAGE_FILE > $SETUP_VOLUME_MOUNT"
+    copy-image "$SETUP_IMAGE_FILE" "$SETUP_VOLUME_MOUNT"
 }
 
 setup-boot() {
@@ -376,7 +408,7 @@ download-image() {
     local out="$2"
 
     mkdir -p "$out.tmp"
-    curl -Lo "$out.zip" "$url"
+    curl -s -Lo "$out.zip" "$url"
 
     tar -xvzf "$out.zip" -C "$out.tmp"
     cp -f "$(find "$out.tmp" -name '*.img' | head -n 1)" "$out"
@@ -422,7 +454,41 @@ boot-write() {
 }
 
 list-drives() {
-    diskutil list | grep "(external, physical)" | awk '{print $1}' | sed 's|^| - |' || echo " - No disks available"
+    diskutil list | grep "(external, physical)" | awk '{print $1}'
+}
+
+prompt-image-file() {
+    # Select the disk image file to use when buring the image or ddownload    
+    : "${SETUP_IMAGE_FILE:="$(cat <<- EOF | gum choose --header="Select disk image to use with your Raspberry pi" --limit 1
+$(find ./images -type f 2> /dev/null || true)
+(download from URL)
+EOF
+)"}"
+
+    # Check if the user specified downloading from a URL
+    if [ "$SETUP_IMAGE_FILE" == "(download from URL)" ]; then
+        SETUP_IMAGE_URL="$(gum input --header="Select image download URL" --value="https://downloads.raspberrypi.org/raspbian_lite_latest")"
+        SETUP_IMAGE_NAME="$(gum input --header="Select image name" --value="$(basename $SETUP_IMAGE_URL).img")"
+        SETUP_IMAGE_FILE="./images/$SETUP_IMAGE_NAME"
+        echo "Download image: $SETUP_IMAGE_FILE < $SETUP_IMAGE_URL" 1>&2
+        download-image "$SETUP_IMAGE_URL" "$SETUP_IMAGE_FILE" 1>&2
+    fi
+
+    echo "$SETUP_IMAGE_FILE"
+}
+
+prompt-volume-mount() {
+    : "${SETUP_VOLUME_MOUNT:="$(cat <<- EOF | gum choose --header="Select volume mount to burn image to" --limit 1
+$(list-drives)
+(custom path)
+EOF
+)"}"
+    
+    if [ "${SETUP_VOLUME_MOUNT:-}" == "(custom path)" ]; then
+        SETUP_VOLUME_MOUNT="$(gum input --header="Select volume mount path" --value="")"
+    fi
+
+    echo "${SETUP_VOLUME_MOUNT:-}"
 }
 
 throw() {
