@@ -28,8 +28,8 @@ main() {
     
     # Process the action that the user specified (if any)
     case ${ACTION:-""} in
-        init) setup-init;;
-        image)  setup-image $@;; # Download and generate a bootable image
+        init) setup-init;; # Initialize a raspberry pi environment
+        image) setup-image $@;; # Download and generate a bootable image
         disk) setup-disk $@;; # Burn an image to the SD card mounted as a volume
         boot) setup-boot $@;; # Set the boot modifications for SD card on first use
         *) # Command not found, show help
@@ -47,6 +47,7 @@ config() {
         case $1 in
             -h|--help) help && exit 0;;
             -i|--image) SETUP_IMAGE_FILE="$2" && shift && shift;; # past argument and value
+            -m|--mount) SETUP_VOLUME_MOUNT="$2" && shift && shift;; # past argument and value
             --dry-run) DRY_RUN=true && shift;;
             *) # unknown option
                 POSITIONAL+=("$1") # save it in an array for later
@@ -58,29 +59,29 @@ config() {
     set -- "${POSITIONAL[@]:-}"
     
     # Prompt the user for inputs (if not already specified)
-    config-interactive
+    if which gum > /dev/null; then 
+        config-interactive # <-- Prompt user for input
+    else
+        printf "Hint: Install 'gum' for better interactive command line experience.\n"
+    fi    
 }
 
 config-interactive() {
+    # Set basic formatting
     C_PRIMARY=12
     F_PRIMARY="gum style --foreground $C_PRIMARY"
 
+    # Display the headers for this script
     gum style \
         --border normal \
         --margin "1" \
         --padding "1 2" \
         --border-foreground $C_PRIMARY \
-        "`$F_PRIMARY '📦 Setup'` - Setup a SD Card image for a Raspberry Pi"
+        "`$F_PRIMARY '📦 Raspberry Pi Zero'` - Setup a SD Card image"
 
-    : "${ACTION:="$(cat <<- EOF | gum choose --header="Setup action to perform?" --limit 1
-init
-image
-boot
-EOF
-)"}"
+    # Select the action (if not already selected)
+    : "${ACTION:="$(prompt-action)"}"
 }
-
-
 
 setup-init() {
     SETUP_IMAGE_URL="$(gum input --header="SETUP_IMAGE_URL" --value="${SETUP_IMAGE_URL:-'https://downloads.raspberrypi.org/raspbian_lite_latest'}")"
@@ -93,16 +94,12 @@ setup-init() {
     env | grep SETUP_
 }
 
-setup-get() {
-    local value=$(yq -r $@ setup.yaml)
-    [ "${value:-"null"}" != "null" ] && echo "$value" && return 0 || return 1
-}
-
 setup-image() {
     # Select the disk image file to use when buring the image
     : "${SETUP_IMAGE_FILE:=${1:-"$(prompt-image-file)"}}"
 
     # Mount the image as a volume mount, to expose the boot dir for updates
+    # See also: https://www.janosgyerik.com/mounting-a-raspberry-pi-image-on-osx/
     SETUP_MOUNT_OUTPUT="$(hdiutil mount "$SETUP_IMAGE_FILE")"
     SETUP_MOUNT_DRIVE="$(echo "$SETUP_MOUNT_OUTPUT" | grep FDisk_partition_scheme | xargs | cut -d ' ' -f1)"
     SETUP_MOUNT_BOOT="$(echo "$SETUP_MOUNT_OUTPUT" | grep Windows_FAT_32 | xargs | cut -d ' ' -f3)"
@@ -144,9 +141,13 @@ setup-boot() {
     
     # Generate setup configurations
     setup-boot-settings "$path"
-    
-    # Notify user to unmount and add SD card
-    echo "You can now unmount the SD card and add to the pi device"
+}
+
+# ----------------------------
+
+setup-get() {
+    local value=$(yq -r $@ setup.yaml)
+    [ "${value:-"null"}" != "null" ] && echo "$value" && return 0 || return 1
 }
 
 setup-boot-image() {
@@ -173,8 +174,8 @@ setup-boot-image() {
     done < <(yq '.boot | keys[]' setup.yaml)    
 
     # Apply overlays from the setup.yaml file(s)
-    while read json; do         
-        setup-boot-overlay "$boot" "$json";
+    while read json; do
+        setup-boot-overlay "$boot" "$json"; 
     done < <(setup-get -o=json -I0 '.boot.overlays[]')
 
     # Add the local volumes to includes 
@@ -455,6 +456,14 @@ boot-write() {
 
 list-drives() {
     diskutil list | grep "(external, physical)" | awk '{print $1}'
+}
+
+prompt-action() {
+    cat <<- EOF | gum choose --header="Setup action to perform?" --limit 1
+init
+image
+disk
+EOF
 }
 
 prompt-image-file() {
