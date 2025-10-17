@@ -23,7 +23,6 @@ EOF
 }
 
 main() {
-    ACTION=${1:-}; [ -z "${1:-}" ] || shift;
     config $@ # <-- Parse the command line args
     
     # Process the action that the user specified (if any)
@@ -38,6 +37,8 @@ main() {
 }
 
 config() {
+    ACTION=${1:-}; [ -z "${1:-}" ] || shift;
+
     [ ! -f .env ] || export $(cat .env | xargs) # Load session variables
 
     # Parse the command line arguments
@@ -62,21 +63,24 @@ config() {
     if which gum > /dev/null; then 
         config-interactive # <-- Prompt user for input
     else
-        printf "Hint: Install 'gum' for better interactive command line experience.\n"
+        printf "Hint: Install 'gum' for a better interactive command line experience.\n"
     fi    
 }
 
 config-interactive() {
-    # Set basic formatting
+    # Set basic styles and formatting
     C_PRIMARY=12
     F_PRIMARY="gum style --foreground $C_PRIMARY"
+
+    export GUM_INPUT_BORDER_FOREGROUND="#F00"
+    export GUM_INPUT_CURSOR_FOREGROUND="#0FF"
+    export GUM_INPUT_PROMPT_FOREGROUND="#00F"
 
     # Display the headers for this script
     gum style \
         --border normal \
         --margin "1" \
         --padding "1 2" \
-        --border-foreground $C_PRIMARY \
         "`$F_PRIMARY '📦 Raspberry Pi Zero'` - Setup a SD Card image"
 
     # Select the action (if not already selected)
@@ -84,7 +88,25 @@ config-interactive() {
 }
 
 setup-init() {
-    SETUP_IMAGE_URL="$(gum input --header="SETUP_IMAGE_URL" --value="${SETUP_IMAGE_URL:-'https://downloads.raspberrypi.org/raspbian_lite_latest'}")"
+    # Select the disk image file to use, this will be our main identifier
+    : "${SETUP_IMAGE_FILE:=${1:-"$(prompt-image-file)"}}"
+    : "${SETUP_IMAGE_FILE:?"Please specify the image you want to setup."}"
+
+    cat << EOF | gum filter --no-limit --header "Select the addons you want to include"
+one
+two
+two.alpha
+two.beta
+three
+four
+EOF
+
+    # gum table < ./temp/data.csv | cut -d ',' -f 1   
+    # echo "# Gum Formats\n- Markdown\n- Code\n- Template\n- Emoji" | gum format
+    # echo '{{ Bold "Tasty" }} {{ Italic "Bubble" }} {{ Color "99" "0" " Gum " }}' | gum format -t template
+    # echo 'I :heart: Bubble Gum :candy:' | gum format -t emoji
+    exit 0
+    
     SETUP_ADMIN_USER="$(gum input --header="SETUP_ADMIN_USER" --value="${SETUP_ADMIN_USER:-}")"
     SETUP_ADMIN_PASS="$(gum input --header="SETUP_ADMIN_PASS" --value="${SETUP_ADMIN_PASS:-}" --password)"
 
@@ -111,7 +133,7 @@ setup-image() {
     [ -z "${SETUP_MOUNT_BOOT:-}" ] || setup-boot "$SETUP_MOUNT_BOOT"
 
     # Check if we should burn the resulting image
-    if gum confirm "Burn to SD Card?"; then
+    if gum confirm "Burn image to SD Card?"; then
         # Burn image to SD card
         setup-disk
     else
@@ -468,14 +490,14 @@ EOF
 
 prompt-image-file() {
     # Select the disk image file to use when buring the image or ddownload    
-    : "${SETUP_IMAGE_FILE:="$(cat <<- EOF | gum choose --header="Select disk image to use with your Raspberry pi" --limit 1
+    : "${SETUP_IMAGE_FILE:="$(cat <<- EOF | gum filter --header="Select disk image to use with your Raspberry pi" --limit 1
 $(find ./images -type f 2> /dev/null || true)
-(download from URL)
+(create new)
 EOF
 )"}"
 
     # Check if the user specified downloading from a URL
-    if [ "$SETUP_IMAGE_FILE" == "(download from URL)" ]; then
+    if [ "$SETUP_IMAGE_FILE" == "(create new)" ]; then
         SETUP_IMAGE_URL="$(gum input --header="Select image download URL" --value="https://downloads.raspberrypi.org/raspbian_lite_latest")"
         SETUP_IMAGE_NAME="$(gum input --header="Select image name" --value="$(basename $SETUP_IMAGE_URL).img")"
         SETUP_IMAGE_FILE="./images/$SETUP_IMAGE_NAME"
@@ -487,11 +509,16 @@ EOF
 }
 
 prompt-volume-mount() {
-    : "${SETUP_VOLUME_MOUNT:="$(cat <<- EOF | gum choose --header="Select volume mount to burn image to" --limit 1
+    : "${SETUP_VOLUME_MOUNT:="(refresh list)"}"
+
+    while [ "${SETUP_VOLUME_MOUNT:-}" == "(refresh list)" ]; do
+        SETUP_VOLUME_MOUNT="$(cat <<- EOF | gum choose --header="Select volume mount to burn image to" --limit 1
 $(list-drives)
+(refresh list)
 (custom path)
 EOF
-)"}"
+)"
+    done
     
     if [ "${SETUP_VOLUME_MOUNT:-}" == "(custom path)" ]; then
         SETUP_VOLUME_MOUNT="$(gum input --header="Select volume mount path" --value="")"
