@@ -92,13 +92,12 @@ setup-init() {
     : "${SETUP_IMAGE_FILE:=${1:-"$(prompt-image-file)"}}"
     : "${SETUP_IMAGE_FILE:?"Please specify the image you want to setup."}"
 
-    cat << EOF | gum filter --no-limit --header "Select the addons you want to include"
-one
-two
-two.alpha
-two.beta
-three
-four
+    cat << EOF | gum filter --no-limit --header "Select the addons you want to initialize and include"
+(select all)
+_root
+network
+volumes
+tools
 EOF
 
     # gum table < ./temp/data.csv | cut -d ',' -f 1   
@@ -490,15 +489,12 @@ EOF
 
 prompt-image-file() {
     # Select the disk image file to use when buring the image or ddownload    
-    : "${SETUP_IMAGE_FILE:="$(cat <<- EOF | gum filter --header="Select disk image to use with your Raspberry pi" --limit 1
-$(find ./images -type f 2> /dev/null || true)
-(create new)
-EOF
-)"}"
+    : "${SETUP_IMAGE_FILE:="$(gum file --header="Select disk image you want to set up" ./images)"}"
+    : "${SETUP_IMAGE_URL:="$(cat ./images/_new.img)"}"
 
     # Check if the user specified downloading from a URL
-    if [ "$SETUP_IMAGE_FILE" == "(create new)" ]; then
-        SETUP_IMAGE_URL="$(gum input --header="Select image download URL" --value="https://downloads.raspberrypi.org/raspbian_lite_latest")"
+    if echo "$SETUP_IMAGE_FILE" | grep -E "_new.img$" ; then
+        SETUP_IMAGE_URL="$(gum input --header="Select image download URL" --value="$SETUP_IMAGE_URL")"
         SETUP_IMAGE_NAME="$(gum input --header="Select image name" --value="$(basename $SETUP_IMAGE_URL).img")"
         SETUP_IMAGE_FILE="./images/$SETUP_IMAGE_NAME"
         echo "Download image: $SETUP_IMAGE_FILE < $SETUP_IMAGE_URL" 1>&2
