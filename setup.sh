@@ -23,11 +23,13 @@ EOF
 }
 
 main() {
+    ACTION=${1:-}; [ -z "${1:-}" ] || shift;
     config $@ # <-- Parse the command line args
     
     # Process the action that the user specified (if any)
     case ${ACTION:-""} in
         init) setup-init;; # Initialize a raspberry pi environment
+        download) setup-download $@;; # Download a bootable image
         image) setup-image $@;; # Download and generate a bootable image
         disk) setup-disk $@;; # Burn an image to the SD card mounted as a volume
         boot) setup-boot $@;; # Set the boot modifications for SD card on first use
@@ -37,8 +39,6 @@ main() {
 }
 
 config() {
-    ACTION=${1:-}; [ -z "${1:-}" ] || shift;
-
     [ ! -f .env ] || export $(cat .env | xargs) # Load session variables
 
     # Parse the command line arguments
@@ -92,41 +92,162 @@ setup-init() {
     : "${SETUP_IMAGE_FILE:=${1:-"$(prompt-image-file)"}}"
     : "${SETUP_IMAGE_FILE:?"Please specify the image you want to setup."}"
 
-    cat << EOF | gum filter --no-limit --header "Select the addons you want to initialize and include"
-(select all)
-_root
-network
-volumes
-tools
-EOF
+    # Mount image so we can access the setup files
+    if [ -z "${SETUP_MOUNT_BOOT:-}" ]; then
+        mount-image "$SETUP_IMAGE_FILE"
+    fi
+
+    # ------------------------------------------------
+    # TODO: Remove hard coded path redirect
+    TEMP_DIR="./temp/dirs/$(basename $SETUP_IMAGE_FILE)"
+    mkdir -p "$TEMP_DIR"
+    cp -rf "$SETUP_MOUNT_BOOT/" "$TEMP_DIR"
+    SETUP_MOUNT_BOOT="$TEMP_DIR"
+    # ------------------------------------------------
+
+    # Declare a setup environment file or load current settings
+    : "${SETUP_CONFIG_ENV:="$SETUP_MOUNT_BOOT/setup.env"}"
+    touch "$SETUP_CONFIG_ENV" && source "$SETUP_CONFIG_ENV"
+    
+    # Prompt user basic setup information
+    setup-admin
+    setup-network
+    setup-tools
+    setup-services
 
     # gum table < ./temp/data.csv | cut -d ',' -f 1   
     # echo "# Gum Formats\n- Markdown\n- Code\n- Template\n- Emoji" | gum format
     # echo '{{ Bold "Tasty" }} {{ Italic "Bubble" }} {{ Color "99" "0" " Gum " }}' | gum format -t template
     # echo 'I :heart: Bubble Gum :candy:' | gum format -t emoji
     exit 0
-    
-    SETUP_ADMIN_USER="$(gum input --header="SETUP_ADMIN_USER" --value="${SETUP_ADMIN_USER:-}")"
-    SETUP_ADMIN_PASS="$(gum input --header="SETUP_ADMIN_PASS" --value="${SETUP_ADMIN_PASS:-}" --password)"
 
-    SETUP_NETWORK_HOSTNAME="$(gum input --header="SETUP_NETWORK_HOSTNAME" --value="${SETUP_NETWORK_HOSTNAME:-}")"
-    SETUP_NETWORK_SSH_ENABLED="$(gum input --header="SETUP_NETWORK_SSH_ENABLED" --value="${SETUP_NETWORK_SSH_ENABLED:-true}")"
+        
+    SETUP_NETWORK_HOSTNAME="$(gum input --header="Network Hostname" --value="${SETUP_NETWORK_HOSTNAME:-}")"
+    SETUP_NETWORK_SSH_ENABLED="$(gum input --header="Enable Remote SSH" --value="${SETUP_NETWORK_SSH_ENABLED:-true}")"
 
     env | grep SETUP_
+}
+
+setup-admin() {
+    setup-ask SETUP_ADMIN_USER "Admin Username"
+    setup-ask SETUP_ADMIN_PASS "Admin Password"
+}
+
+setup-network() {
+    if ! setup-confirm SETUP_NETWORK_ENABLED "Enable network to this devive?"; then
+        return 0
+    fi
+
+    setup-ask SETUP_NETWORK_HOSTNAME    "Network Hostname"
+    exit 0
+
+    local continue="false"
+    while [ "$continue" != "true" ]; do
+        while read option; do
+            case ${option:-"(continue)"} in
+                "(continue)") continue="true";; # Initialize a raspberry pi environment
+                *) echo "Option '$option' not found."
+            esac 
+        done < <(echo "
+(continue)
+Enable SSH Access
+Connect device to Wifi
+Create a Wifi Hostspot
+Advanced Options
+")
+    done
+    
+    setup-ask SETUP_NETWORK_SSH_ENABLE  "Network: Enable SSH?"
+    setup-ask SETUP_NETWORK_WIFI_SSID   "Wifi network name"
+    setup-ask SETUP_NETWORK_WIFI_PSK    "Wifi network pass key"
+    setup-ask SETUP_LOCALE_COUNTRY      "Wifi Country"
+}
+
+setup-tools() {
+    echo TODO - Tools
+    # Interactively prompt user to setup features
+    local continue="false"
+    while [ "$continue" != "true" ]; do
+        while read option; do
+            case ${option:-"(continue)"} in
+                "(continue)") continue="true";; # Initialize a raspberry pi environment
+                admin) echo " - TODO Setup $option";; # Download and generate a bootable image
+                network) echo " - TODO Setup $option";; # Download and generate a bootable image
+                *) echo "Option '$option' not found."
+            esac 
+        done < <(setup-list-features)
+    done
+}
+
+setup-services() {
+    echo TODO - Services
+}
+
+setup-download() {
+    local url="$1"
+    local out="${2:-"$(basename "$url")"}"
+
+    download-image "$url" "$out"
+}
+
+setup-ask() {
+    local key="${1:-}"; [ -z "${1:-}" ] || shift;
+    local msg="${1:-}"; [ -z "${1:-}" ] || shift;
+    local val="$(eval "echo \$$key")"
+    local new="$(gum input --header="$msg" --value="${val:-}")"
+
+    # Update the setup environment file (if exists)
+    if [ ! -z "$SETUP_CONFIG_ENV" ]; then
+        if grep -E "^$key=" "$SETUP_CONFIG_ENV" > /dev/null; then
+            # Update existing entry
+            sed -i '' -E "s|^($key)=.*$|\1=\"$new\"|" "$SETUP_CONFIG_ENV"
+        else
+            # Add new entry to config
+            echo "$key=\"$new\"" >> "$SETUP_CONFIG_ENV"
+        fi
+    fi
+}
+
+setup-confirm() {
+    local key="${1:-}"; [ -z "${1:-}" ] || shift;
+    local msg="${1:-}"; [ -z "${1:-}" ] || shift;
+    local val="$(eval "echo \${$key:-}")"
+    local new="$(gum confirm "$msg" --default="${val:-false}" && echo true || echo false)"
+
+    # Update the setup environment file (if exists)
+    if [ ! -z "$SETUP_CONFIG_ENV" ]; then
+        if grep -E "^$key=" "$SETUP_CONFIG_ENV" > /dev/null; then
+            # Update existing entry
+            sed -i '' -E "s|^($key)=.*$|\1=\"$new\"|" "$SETUP_CONFIG_ENV"
+        else
+            # Add new entry to config
+            echo "$key=\"$new\"" >> "$SETUP_CONFIG_ENV"
+        fi
+    fi
+}
+
+setup-list-features() {
+    cat << EOF | gum filter --no-limit --header "Select the addons you want to initialize and include"
+(continue)
+admin
+network
+volumes
+tools
+EOF
 }
 
 setup-image() {
     # Select the disk image file to use when buring the image
     : "${SETUP_IMAGE_FILE:=${1:-"$(prompt-image-file)"}}"
+    : "${SETUP_IMAGE_FILE:?"Please specify the image you want to setup."}"
 
-    # Mount the image as a volume mount, to expose the boot dir for updates
-    # See also: https://www.janosgyerik.com/mounting-a-raspberry-pi-image-on-osx/
-    SETUP_MOUNT_OUTPUT="$(hdiutil mount "$SETUP_IMAGE_FILE")"
-    SETUP_MOUNT_DRIVE="$(echo "$SETUP_MOUNT_OUTPUT" | grep FDisk_partition_scheme | xargs | cut -d ' ' -f1)"
-    SETUP_MOUNT_BOOT="$(echo "$SETUP_MOUNT_OUTPUT" | grep Windows_FAT_32 | xargs | cut -d ' ' -f3)"
+    # Mount image so we can access files within
+    mount-image "$SETUP_IMAGE_FILE"
 
-    # Unmount drive and volume(s) once we are done with this function
-    trap "[ ! -d "$SETUP_MOUNT_DRIVE" ] || hdiutil eject $SETUP_MOUNT_DRIVE" EXIT
+    # Create and initialise the image settings file
+    if [ ! -f "$SETUP_MOUNT_BOOT/setup.env" ]; then
+        setup-init
+    fi
 
     # Update the image boot partition with our selected features
     [ -z "${SETUP_MOUNT_BOOT:-}" ] || setup-boot "$SETUP_MOUNT_BOOT"
@@ -155,6 +276,10 @@ setup-disk() {
 setup-boot() {
     local path=${1:-""}
 
+    # TODO: Remove temp path
+    local path="$(echo $SETUP_IMAGE_FILE | sed 's|\..*$||')"
+    mkdir -p "$path"
+
     # Stop the script here if no boot volume was specified
     [ -d "${path:-}" ] || throw "The boot path '${path:-}' does not exists."
     
@@ -164,12 +289,6 @@ setup-boot() {
     setup-boot-settings "$path"
 }
 
-# ----------------------------
-
-setup-get() {
-    local value=$(yq -r $@ setup.yaml)
-    [ "${value:-"null"}" != "null" ] && echo "$value" && return 0 || return 1
-}
 
 setup-boot-image() {
     local boot="$1"
@@ -192,7 +311,7 @@ setup-boot-image() {
             cmdline.txt) setup-boot-cmdline "$ident" "$json";;
             *) setup-boot-file-overlay "$ident" "$json";;
         esac
-    done < <(yq '.boot | keys[]' setup.yaml)    
+    done < <(yq '.boot | keys[]' setup.yaml)
 
     # Apply overlays from the setup.yaml file(s)
     while read json; do
@@ -201,6 +320,26 @@ setup-boot-image() {
 
     # Add the local volumes to includes 
     setup-volumes "$boot"
+}
+
+mount-image() {
+    local image=${1:-$SETUP_IMAGE_FILE}
+
+    # Mount the image as a volume mount, to expose the boot dir for updates
+    # See also: https://www.janosgyerik.com/mounting-a-raspberry-pi-image-on-osx/
+    SETUP_MOUNT_OUTPUT="$(hdiutil mount "$image")"
+    SETUP_MOUNT_DRIVE="$(echo "$SETUP_MOUNT_OUTPUT" | grep FDisk_partition_scheme | xargs | cut -d ' ' -f1)"
+    SETUP_MOUNT_BOOT="$(echo "$SETUP_MOUNT_OUTPUT" | grep Windows_FAT_32 | xargs | cut -d ' ' -f3)"
+
+    # Unmount drive and volume(s) once we are done with this function
+    trap "[ ! -d "$SETUP_MOUNT_DRIVE" ] || hdiutil eject $SETUP_MOUNT_DRIVE" EXIT
+}
+
+# ----------------------------
+
+setup-get() {
+    local value=$(yq -r $@ setup.yaml)
+    [ "${value:-"null"}" != "null" ] && echo "$value" && return 0 || return 1
 }
 
 setup-boot-config() {
@@ -497,8 +636,11 @@ prompt-image-file() {
         SETUP_IMAGE_URL="$(gum input --header="Select image download URL" --value="$SETUP_IMAGE_URL")"
         SETUP_IMAGE_NAME="$(gum input --header="Select image name" --value="$(basename $SETUP_IMAGE_URL).img")"
         SETUP_IMAGE_FILE="./images/$SETUP_IMAGE_NAME"
-        echo "Download image: $SETUP_IMAGE_FILE < $SETUP_IMAGE_URL" 1>&2
-        download-image "$SETUP_IMAGE_URL" "$SETUP_IMAGE_FILE" 1>&2
+        
+        #echo "Download image: $SETUP_IMAGE_FILE < $SETUP_IMAGE_URL" 1>&2
+        #download-image "$SETUP_IMAGE_URL" "$SETUP_IMAGE_FILE" 1>&2
+        #"$0" download "$SETUP_IMAGE_URL" "$SETUP_IMAGE_FILE" 1>&2
+        gum spin --spinner dot --title "Download image: $SETUP_IMAGE_URL" -- "$0" download "$SETUP_IMAGE_URL" "$SETUP_IMAGE_FILE" 1>&2
     fi
 
     echo "$SETUP_IMAGE_FILE"
@@ -522,6 +664,7 @@ EOF
 
     echo "${SETUP_VOLUME_MOUNT:-}"
 }
+
 
 throw() {
     red=$([ -z $TERM ] || printf "\033[0;31m")
