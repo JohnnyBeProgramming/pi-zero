@@ -224,6 +224,8 @@ setup-confirm() {
             echo "$key=\"$new\"" >> "$SETUP_CONFIG_ENV"
         fi
     fi
+
+    [ "$new" == "true" ] && return 0 || return 1
 }
 
 setup-list-features() {
@@ -632,15 +634,14 @@ prompt-image-file() {
     : "${SETUP_IMAGE_URL:="$(cat ./images/_new.img)"}"
 
     # Check if the user specified downloading from a URL
-    if echo "$SETUP_IMAGE_FILE" | grep -E "_new.img$" ; then
+    if echo "$SETUP_IMAGE_FILE" | grep -E "_new.img$" > /dev/null; then
         SETUP_IMAGE_URL="$(gum input --header="Select image download URL" --value="$SETUP_IMAGE_URL")"
         SETUP_IMAGE_NAME="$(gum input --header="Select image name" --value="$(basename $SETUP_IMAGE_URL).img")"
         SETUP_IMAGE_FILE="./images/$SETUP_IMAGE_NAME"
         
         #echo "Download image: $SETUP_IMAGE_FILE < $SETUP_IMAGE_URL" 1>&2
         #download-image "$SETUP_IMAGE_URL" "$SETUP_IMAGE_FILE" 1>&2
-        #"$0" download "$SETUP_IMAGE_URL" "$SETUP_IMAGE_FILE" 1>&2
-        gum spin --spinner dot --title "Download image: $SETUP_IMAGE_URL" -- "$0" download "$SETUP_IMAGE_URL" "$SETUP_IMAGE_FILE" 1>&2
+        gum spin --spinner dot --title "Download image: $SETUP_IMAGE_URL" -- "$0" download "$SETUP_IMAGE_URL" "$SETUP_IMAGE_FILE" > /dev/null
     fi
 
     echo "$SETUP_IMAGE_FILE"
