@@ -1,6 +1,0 @@
-network:
-  wifi:
-    type: WPA-PSK
-    ssid: $WIFI_SSID # <-- WiFi SSID
-    psk: $WIFI_PSK # <-- WPA/WPA2 passphrase
-    country: $WIFI_COUNTRY

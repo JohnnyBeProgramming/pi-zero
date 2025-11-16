@@ -13,6 +13,7 @@ Basic Usage:
   $0 ACTION [ args ]
 
 Actions:
+  init
   image <path-to-image-file>
   disk <disk-mount>
 
@@ -33,8 +34,7 @@ main() {
         image) setup-image $@;; # Download and generate a bootable image
         disk) setup-disk $@;; # Burn an image to the SD card mounted as a volume
         boot) setup-boot $@;; # Set the boot modifications for SD card on first use
-        *) # Command not found, show help
-            help && exit 1
+        *) help && exit 1;; # Command not found, show help
     esac    
 }
 
@@ -130,7 +130,7 @@ setup-init() {
     SETUP_MOUNT_BOOT="$TEMP_DIR"
     # ------------------------------------------------
 
-    # Copy the setup files to the path
+    # Copy the setup files to the boot folder
     setup-boot "$SETUP_MOUNT_BOOT"
 
     # Declare a setup environment file or load current settings
@@ -260,27 +260,22 @@ setup-disk() {
 
 setup-boot() {
     local path=${1:-""}
+    local boot="$1"
+    local boot_files="./setup/boot"
 
     # Stop the script here if no boot volume was specified
     [ -d "${path:-}" ] || throw "The boot path '${path:-}' does not exists."
     
-    setup-boot-image "$path"
-    
-    # Generate setup configurations
-    setup-boot-settings "$path"
-}
-
-setup-boot-image() {
-    local boot="$1"
-    local boot_files="./setup/boot"
-
-    echo "Updating SD Card boot config: $path"
+    echo "Updating SD Card boot: $path"
 
     # Copy pre-defined boot files
-    if [ -d "$boot_files" ]; then 
-        echo "Copying boot files from: $boot_files"
+    if [ -d "$boot_files" ]; then        
         cp -rf "$boot_files/" "$path"
     fi
+
+    #setup-boot-cmdline "cmdline.txt" "{ system.run: /boot/setup.sh }"
+    #setup-boot-cmdline "cmdline.txt" "{ system.run_success_action: reboot }"
+    #setup-boot-cmdline "cmdline.txt" "{ unit: kernel-command-line.target }"
 
     #setup-boot-file-overlay "ssh.txt" ""
 
@@ -288,10 +283,6 @@ setup-boot-image() {
     #setup-boot-cmdline "cmdline.txt" "{ modules-load: [dwc2, g_ether] }"
 
     #setup-boot-cmdline "cmdline.txt" "{ net.ifnames: '0' }"
-
-    #setup-boot-cmdline "cmdline.txt" "{ system.run: /boot/setup.sh }"
-    #setup-boot-cmdline "cmdline.txt" "{ system.run_success_action: reboot }"
-    #setup-boot-cmdline "cmdline.txt" "{ unit: kernel-command-line.target }"
     # ---------------------------------------    
 }
 
@@ -412,50 +403,6 @@ setup-boot-file-overlay() {
         ;;
         *) throw "[$type] Unknown input: $json";;
     esac
-}
-
-setup-boot-settings() {
-    local boot="$1"
-    local config="$boot/volumes/setup.env"
-
-    echo "Creating setup config: $config"
-    mkdir -p "$(dirname $config)"
-    echo "# Auto generated settings" > "$config"
-
-    # Convert the setup YAML to to ENV compatable vars 
-    yq -P '
-        . | del(.includes,.boot) | 
-        .. | select(. == "*") | [
-            "SETUP_" + (path | join("_") | upcase) + "=" + (. | to_json)
-        ] | join("")' setup.yaml \
-    | envsubst \
-    | grep -v -e '^$' \
-    >> "$config"
-
-    # Track the tools and services that we want to install on first boot
-    SETUP_TOOLS=()    
-    while read tool; do         
-        SETUP_TOOLS+=("$tool")
-    done < <(yq -P '.tools | to_entries[] | select(.value != false) | (
-        .key + "=" + .value | sub("=true"; "")
-    )' setup.yaml)
-
-    SETUP_SERVICES=()
-    while read service; do 
-        SETUP_SERVICES+=("$service")
-    done < <(yq -oj -I0 '.services | to_entries[] | select(.value != false) | (
-        .key
-    )' setup.yaml)
-
-    cat << EOF >> "$config"
-
-# Setup additional tools
-SETUP_TOOLS=(${SETUP_TOOLS[@]:-})
-
-# Install system services
-SETUP_SERVICES=(${SETUP_SERVICES[@]:-})
-EOF
-
 }
 
 setup-boot-overlay() {

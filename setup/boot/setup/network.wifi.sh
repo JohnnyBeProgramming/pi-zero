@@ -2,31 +2,30 @@
 # --------------------------------------------------------------
 set -euo pipefail # Stop running the script on first error...
 # --------------------------------------------------------------
-: "${WIFI_COUNTRY:=""}"
-: "${WIFI_SSID:=""}"
-: "${WIFI_PSK:=""}"
+: "${SETUP_LOCALE_COUNTRY:=""}"
+: "${SETUP_NETWORK_WIFI_SSID:=""}"
+: "${SETUP_NETWORK_WIFI_PSK:=""}"
 : "${WIFI_INTERFACE:="DIR=/var/run/wpa_supplicant GROUP=netdev"}"
 
 # Check if th script should run
-[ ! "${WIFI_COUNTRY:-}" == "" ] || exit 0
-[ ! "${WIFI_SSID:-}" == "" ] || exit 0
-[ ! "${WIFI_PSK:-}" == "" ] || exit 0
+[ ! "${SETUP_LOCALE_COUNTRY:-}" == "" ] || exit 0
+[ ! "${SETUP_NETWORK_WIFI_SSID:-}" == "" ] || exit 0
+[ ! "${SETUP_NETWORK_WIFI_PSK:-}" == "" ] || exit 0
 
 echo "Configuring wifi settings:"
-echo " - Country: $WIFI_COUNTRY"
-echo " - SSID: $WIFI_SSID"
-
+echo " - Country: $SETUP_LOCALE_COUNTRY"
+echo " - SSID: $SETUP_NETWORK_WIFI_SSID"
 
 # Create the wifi configuration (if provided)
 cat << WPAEOF > /etc/wpa_supplicant/wpa_supplicant.conf
-country=$WIFI_COUNTRY
+country=$SETUP_LOCALE_COUNTRY
 ctrl_interface=$WIFI_INTERFACE
 ap_scan=1
 
 update_config=1
 network={
-	ssid="$WIFI_SSID"
-	psk=$WIFI_PSK
+	ssid="$SETUP_NETWORK_WIFI_SSID"
+	psk=$SETUP_NETWORK_WIFI_PSK
 }
 WPAEOF
 
