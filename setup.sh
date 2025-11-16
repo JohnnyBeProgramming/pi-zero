@@ -34,6 +34,7 @@ main() {
         image) setup-image $@;; # Download and generate a bootable image
         disk) setup-disk $@;; # Burn an image to the SD card mounted as a volume
         boot) setup-boot $@;; # Set the boot modifications for SD card on first use
+        vm) setup-vm $@;; # Start a VM for the selected image
         *) help && exit 1;; # Command not found, show help
     esac    
 }
@@ -254,7 +255,7 @@ setup-disk() {
     : "${SETUP_IMAGE_FILE:=${1:-"$(prompt-image-file)"}}"
     : "${SETUP_VOLUME_MOUNT:=${2:-"$(prompt-volume-mount)"}}"
 
-    [ -d "${SETUP_VOLUME_MOUNT:-}" ] || throw "Unknown volume mount: ${SETUP_VOLUME_MOUNT:-}"
+    [ ! -z "${SETUP_VOLUME_MOUNT:-}" ] || throw "Unknown volume mount: ${SETUP_VOLUME_MOUNT:-}"
     
     # Burn the base image to the SD Card image
     echo "Copying image: $SETUP_IMAGE_FILE > $SETUP_VOLUME_MOUNT"
@@ -283,7 +284,7 @@ setup-boot() {
 
     # Configure ethernet over USB cable (if enabled)
     if [ "${SETUP_NETWORK_USB_ENABLED:-}" == "true" ]; then
-        setup-cmdline-apply "dtoverlay=dwc2"
+        #setup-config-apply "dtoverlay=dwc2"
         setup-cmdline-apply "modules-load=dwc2,g_ether" "rootwait"
     fi
 
@@ -291,10 +292,36 @@ setup-boot() {
     if [ "${SETUP_NETWORK_SSH_ENABLED:-}" == "true" ]; then
         echo "" | setup-boot-overlay "ssh.txt"
     fi
-    
+
     # There is a caveat with doing this. It makes using two ethernet or wifi devices difficult if not impossible.
     #setup-boot-cmdline "cmdline.txt" "{ net.ifnames: '0' }"
     # ---------------------------------------    
+}
+
+setup-vm() {
+    # Select the disk image file to use when buring the image
+    : "${SETUP_IMAGE_FILE:=${1:-"$(prompt-image-file)"}}"
+    : "${SETUP_IMAGE_FILE:?"Please specify the image you want to setup."}"
+
+    # Mount image so we can access files within
+    mount-image "$SETUP_IMAGE_FILE"
+
+    # Create and initialise the image settings file
+    echo "Image volumes mounted:"
+    echo " - boot: $SETUP_MOUNT_BOOT"
+    echo " - disk: $SETUP_MOUNT_DRIVE"
+    echo "$SETUP_MOUNT_OUTPUT"
+    read noop
+
+    #qemu-system-arm -kernel ~/qemu_vms/<your-kernel-qemu> \
+    #    -cpu arm1176 \
+    #    -m 256 \
+    #    -M versatilepb \
+    #    -serial stdio \
+    #    -append "root=/dev/sda2 rootfstype=ext4 rw" \
+    #    -hda ~/qemu_vms/<your-jessie-image.img> \
+    #    -redir tcp:2022::22 \
+    #    -no-reboot
 }
 
 mount-image() {
