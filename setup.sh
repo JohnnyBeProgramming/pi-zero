@@ -84,7 +84,12 @@ config-interactive() {
         "`$F_PRIMARY '📦 Raspberry Pi Zero'` - Setup a SD Card image"
 
     # Select the action (if not already selected)
-    : "${ACTION:="$(prompt-action)"}"
+    : "${ACTION:="$(cat <<- EOF | gum choose --header="Setup action to perform?" --limit 1
+init
+image
+disk
+EOF
+)"}"
 }
 
 setup-image() {
@@ -130,21 +135,19 @@ setup-init() {
     SETUP_MOUNT_BOOT="$TEMP_DIR"
     # ------------------------------------------------
 
-    # Copy the setup files to the boot folder
-    setup-boot "$SETUP_MOUNT_BOOT"
-
     # Declare a setup environment file or load current settings
     : "${SETUP_CONFIG_ENV:="$SETUP_MOUNT_BOOT/setup.env"}"
     [ -f "$SETUP_CONFIG_ENV" ] || cp ./default.env "$SETUP_CONFIG_ENV"
     source "$SETUP_CONFIG_ENV"
     
-    return 0
-
     # Prompt user basic setup information
     setup-admin
-    setup-network
-    setup-tools
-    setup-services  
+    #setup-network
+    #setup-tools
+    #setup-services  
+
+    # Copy the setup files to the boot folder
+    setup-boot "$SETUP_MOUNT_BOOT"
 }
 
 setup-admin() {
@@ -273,15 +276,23 @@ setup-boot() {
         cp -rf "$boot_files/" "$path"
     fi
 
-    #setup-boot-cmdline "cmdline.txt" "{ system.run: /boot/setup.sh }"
-    #setup-boot-cmdline "cmdline.txt" "{ system.run_success_action: reboot }"
+    # Configure the first run script
+    setup-cmdline-apply "system.run=/boot/setup.sh"
+    setup-cmdline-apply "system.run_success_action=reboot"
     #setup-boot-cmdline "cmdline.txt" "{ unit: kernel-command-line.target }"
 
-    #setup-boot-file-overlay "ssh.txt" ""
+    # Configure ethernet over USB cable (if enabled)
+    if [ "${SETUP_NETWORK_USB_ENABLED:-}" == "true" ]; then
+        setup-cmdline-apply "dtoverlay=dwc2"
+        setup-cmdline-apply "modules-load=dwc2,g_ether" "rootwait"
+    fi
 
-    #setup-boot-config "config.txt" "{ dtoverlay: dwc2 }"
-    #setup-boot-cmdline "cmdline.txt" "{ modules-load: [dwc2, g_ether] }"
-
+    # Configure SSH access (if enabled)
+    if [ "${SETUP_NETWORK_SSH_ENABLED:-}" == "true" ]; then
+        echo "" | setup-boot-overlay "ssh.txt"
+    fi
+    
+    # There is a caveat with doing this. It makes using two ethernet or wifi devices difficult if not impossible.
     #setup-boot-cmdline "cmdline.txt" "{ net.ifnames: '0' }"
     # ---------------------------------------    
 }
@@ -325,132 +336,30 @@ setup-boot-config() {
     esac
 }
 
-setup-boot-cmdline() {
-    local file="$1"
-    local json="$2"
-    local type="$(echo "$json" | yq '. | tag')"
-    case ${type:-""} in
-        !!map) 
-            # Write string output to file
-            echo " + $file < [$type]"
-            while read json; do
-                setup-boot-cmdline-item "$json" 
-            done < <(echo $json | yq -oj -I0 '. | to_entries[]' )
-        ;;
-        *) throw "[$type] Unknown input: $json";;
-    esac
-}
+setup-cmdline-apply() {
+    local term="$1"
+    local after="${2:-}"
+    local file="$SETUP_MOUNT_BOOT/cmdline.txt"
 
-setup-boot-cmdline-item() {
-    local json="$1"
-    local key="$(echo "$json" | yq -r '.key')"
-    local val="$(echo "$json" | yq -oj -I0 '.value')"
-    local type="$(echo "$val" | yq '. | tag')"
-    local data=""
-    case ${type:-""} in
-        !!str) 
-            # Use string value as is
-            data="$(echo "$val" | yq -r '.')"
-            setup-boot-cmdline-item-apply "$key" "$data"
-        ;;
-        !!seq) 
-            # Merge list as comma separated
-            data="$(echo "$val" | yq -P '. | join(",")')"
-            setup-boot-cmdline-item-apply "$key" "$data"
-        ;;
-        !!map) 
-            # Merge map into key value pairs
-            while read json; do
-                local prop="$(echo $json | yq '.key')"
-                local val="$(echo $json | yq '.value')"
-                setup-boot-cmdline-item-apply "$prop" "$val"
-            done < <(echo "{ "$key": $val }" | yq -oj -I0 '
-                .. 
-                | select(. == "*") 
-                | {
-                    (path | . as $x | (.[] | select((. | tag) == "!!int") |= (["[", ., "]"] | join(""))) | $x | join(".") | sub(".\[", "[")): .
-                  } 
-                | to_entries[]
-            ')
-        ;;
-        *) throw "[$type] Unknown input: $json";;
-    esac
-}
+    echo " + cmdline.txt    < $term"
+    
+    if grep -q "$term" "$file"; then
+        return 0 # Already found
+    fi
 
-setup-boot-cmdline-item-apply() {
-    local key="$1"
-    local data="$2"
-
-    echo "    + $key=$data"
-
-    # Handle edhe cases
-    case ${key:-""} in
-        modules-load) 
-            boot-replace "$boot/$file" "rootwait" "rootwait $key=$data";; 
-        *)  boot-replace "$boot/$file" "\$" " $key=$data";;
-    esac
-}
-
-setup-boot-file-overlay() {
-    local file="$1"
-    local json="$2"
-    local type="$(echo "$json" | yq '. | tag')"
-    case ${type:-""} in
-        !!str) 
-            # Write string output to file
-            echo " + $file < [$type]"
-            echo "$(echo "$json" | yq -r)" > "$boot/$file"
-        ;;
-        *) throw "[$type] Unknown input: $json";;
-    esac
+    if [ -z "${after:-}" ]; then
+        sed -i '' "s|\$| $term|" "$file"
+    else 
+        sed -i '' "s|$after|$after $term|" "$file"
+    fi
 }
 
 setup-boot-overlay() {
-    local boot="${1:-"$(help && exit 1)"}"
-    local json="${2:-"{}"}"
-    local file="$(echo "$json" | yq -r '.file')"
-    local test="$(echo "$json" | yq -r '.test')"
-    local data="$(echo "$json" | yq -r '.data')"
-    local config="$(echo "$json" | yq -r '. | del(.file, .test)')"
-    local append="$(echo "$json" | yq -r '.append')"
-    local replace="$(echo "$json" | yq -r '.replace')"
-    local exists="$(echo "$json" | yq -r '.exists')"
+    local file="$1"
+    local value="${2:-"$(cat /dev/stdin)"}"
     
-    # Check if there is a test for this overlay
-    if [ -f "$boot/$file" ] && [ ! -z "${test:-}" ] && grep -E "$test" "$boot/$file" > /dev/null; then
-        printf " ✓ %s ~ %s \n" "$boot/$file" "$test"
-        return # Test passed, up to date
-    fi
-
-    if [ "${append:-"null"}" != "null" ]; then
-        grep "$append" "$boot/$file" > /dev/null 2>&1 && return || true
-        printf " + %s << %s \n" "$boot/$file" "$append"
-        boot-append "$boot/$file" "$append"
-        return
-    fi
-
-    if [ "${replace:-"null"}" != "null" ]; then
-        grep "${data:-}" "$boot/$file" > /dev/null 2>&1 && return || true
-        printf " + %s < ['%s'='%s']\n" "$boot/$file" "$replace" "$data"
-        boot-replace "$boot/$file" "$replace" "$data"
-        return
-    fi
-
-    # Write raw data if no other actions applied
-    if [ ! -z "$(echo "$json" | yq -r '. | keys' | grep "data")" ]; then
-        printf " ± %s < %s\n" "$boot/$file" "data..."
-        echo "${data:-}" > "$boot/$file"
-        return
-    fi
-
-    throw " ? $file < $config\n"
-}
-
-setup-boot-file() {
-    local path="$1"
-    local out="${2:-"$RPI_BOOT_PATH/$(basename $path)"}"
-    echo " + $out"
-    cat "$path" | envsubst > "$out"
+    echo " + $file"
+    echo "${value:-}" > "$SETUP_MOUNT_BOOT/$file"
 }
 
 download-image() {
@@ -486,34 +395,10 @@ boot-append() {
     fi
 }
 
-boot-replace() {
-    local file="$1"
-    local term="$2"
-    local feat="$3"
-
-    if ! grep -q "$feat" "$file"; then  
-        sed -i '' "s|$term|$feat|" "$file"
-    fi
-}
-
-boot-write() {
-    local file=$1
-    local data=$2
-    mkdir -p "$(dirname "$file")"
-    echo "$data" > "$file"
-}
-
 list-drives() {
     diskutil list | grep "(external, physical)" | awk '{print $1}'
 }
 
-prompt-action() {
-    cat <<- EOF | gum choose --header="Setup action to perform?" --limit 1
-init
-image
-disk
-EOF
-}
 
 prompt-image-file() {
     # Select the disk image file to use when buring the image or ddownload    
