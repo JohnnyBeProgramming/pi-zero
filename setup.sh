@@ -106,9 +106,6 @@ setup-image() {
         setup-init
     fi
 
-    # Update the image boot partition with our selected features
-    [ -z "${SETUP_MOUNT_BOOT:-}" ] || setup-boot "$SETUP_MOUNT_BOOT"
-
     # Check if we should burn the resulting image
     if gum confirm "Burn image to SD Card?"; then
         # Burn image to SD card
@@ -284,7 +281,7 @@ setup-boot() {
 
     # Configure ethernet over USB cable (if enabled)
     if [ "${SETUP_NETWORK_USB_ENABLED:-}" == "true" ]; then
-        #setup-config-apply "dtoverlay=dwc2"
+        setup-config-apply "dtoverlay=dwc2"
         setup-cmdline-apply "modules-load=dwc2,g_ether" "rootwait"
     fi
 
@@ -379,6 +376,18 @@ setup-cmdline-apply() {
     else 
         sed -i '' "s|$after|$after $term|" "$file"
     fi
+}
+
+setup-config-apply() {
+    local term="$1"
+    local file="$SETUP_MOUNT_BOOT/config.txt"
+
+    if grep -E "^$term" "$file" > /dev/null; then        
+        return 0 # Already up to date
+    fi
+    
+    echo " + config.txt     < $term"
+    echo "$term" >> $file
 }
 
 setup-boot-overlay() {
