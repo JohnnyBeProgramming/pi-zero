@@ -37,4 +37,4 @@ cleanup() {
    fi
 }
 
-main $@ 2>&1 | tee $BOOT_PATH/boot.log # <-- Bootstrap script
+main $@ 2>&1 | tee $BOOT_PATH/setup.log # <-- Bootstrap script

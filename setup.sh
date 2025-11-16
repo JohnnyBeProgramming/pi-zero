@@ -106,13 +106,12 @@ setup-image() {
         setup-init
     fi
 
+    # Unmount disk and release sources, as we no longer need it
+    hdiutil eject $SETUP_MOUNT_DRIVE > /dev/null
+
     # Check if we should burn the resulting image
-    if gum confirm "Burn image to SD Card?"; then
-        # Burn image to SD card
-        setup-disk
-    else
-        # Unmount disk and release sources, as we no longer need it
-        hdiutil eject $SETUP_MOUNT_DRIVE
+    if gum confirm "Burn image to SD Card?"; then        
+        setup-disk # Burn image to SD card...
     fi
 }
 
@@ -127,10 +126,10 @@ setup-init() {
     fi
     # ------------------------------------------------
     # TODO: Remove hard coded path redirect
-    TEMP_DIR="./temp/$(basename $SETUP_IMAGE_FILE)"
-    mkdir -p "$TEMP_DIR"
-    cp -rf "$SETUP_MOUNT_BOOT/" "$TEMP_DIR"
-    SETUP_MOUNT_BOOT="$TEMP_DIR"
+    #TEMP_DIR="./temp/$(basename $SETUP_IMAGE_FILE)"
+    #mkdir -p "$TEMP_DIR"
+    #cp -rf "$SETUP_MOUNT_BOOT/" "$TEMP_DIR"
+    #SETUP_MOUNT_BOOT="$TEMP_DIR"
     # ------------------------------------------------
 
     # Declare a setup environment file or load current settings
@@ -255,7 +254,6 @@ setup-disk() {
     [ ! -z "${SETUP_VOLUME_MOUNT:-}" ] || throw "Unknown volume mount: ${SETUP_VOLUME_MOUNT:-}"
     
     # Burn the base image to the SD Card image
-    echo "Copying image: $SETUP_IMAGE_FILE > $SETUP_VOLUME_MOUNT"
     copy-image "$SETUP_IMAGE_FILE" "$SETUP_VOLUME_MOUNT"
 }
 
@@ -418,9 +416,9 @@ copy-image() {
     echo "Writing image '$file' to '$path'...(requires sudo)"
 
     # diskutil list | grep "(external, physical)" | awk '{print $1}'    
-    diskutil unmountDisk "$path"
+    diskutil unmountDisk "$path" > /dev/null
+    echo "Please note: You need to be root to write to disk."
     sudo dd bs=1m if="$file" of="$path"
-    sleep 1
 }
 
 boot-append() {
