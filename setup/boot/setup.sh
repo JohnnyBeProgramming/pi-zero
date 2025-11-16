@@ -26,10 +26,12 @@ main() {
 }
 
 cleanup() {
+   # Remove the setup files and config secrets
+   rm -f "$BOOT_CONF"
+   rm -f "$BOOT_PATH/setup.sh"
+   rm -rf "$BOOT_INIT"
+
    # Remove init scripts after first successful run
-   rm -f "$BOOT_PATH/setup.env"
-   rm -f "$BOOT_PATH/firstrun.sh"
-   rm -rf "$BOOT_PATH/init.d/"
    if [ -f "$BOOT_PATH/cmdline.txt" ]; then
       sed -i 's| systemd.run.*||g' "$BOOT_PATH/cmdline.txt"
    fi
