@@ -4,7 +4,7 @@ set -euo pipefail # Stop running the script on first error...
 set +e
 # --------------------------------------------------------------
 : "${BOOT_PATH:=${1:-"/boot"}}"
-: "${BOOT_INIT:="$BOOT_PATH/init.d"}"
+: "${BOOT_INIT:="$BOOT_PATH/setup"}"
 : "${BOOT_CONF:="$BOOT_PATH/setup.env"}"
 
 main() {
