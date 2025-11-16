@@ -10,3 +10,4 @@ echo "Enabling SSH (if not already enabled)..."
 
 # Enable ssh
 systemctl enable ssh
+systemctl start ssh
